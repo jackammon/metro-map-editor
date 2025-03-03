@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  output: 'standalone',
+  output: 'export',
   // Disable image optimization during build to keep files under size limit
   images: {
     unoptimized: true,

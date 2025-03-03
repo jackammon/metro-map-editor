@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# Run the Next.js build
+# Run the Next.js build which now uses the 'export' output option
 npm run build
 
-# Remove any excessively large files from the .next directory
-find .next -type f -size +20M -delete
+# Next.js will now export to the 'out' directory, so we don't need to clean .next cache
 
-# Remove the entire cache directory in .next to avoid large files
-rm -rf .next/cache/
+# Copy the _redirects file to the out directory to ensure it's deployed
+cp _redirects out/
 
 # Output success message
-echo "Build completed and cleaned up for Cloudflare Pages deployment"
+echo "Build completed for Cloudflare Pages deployment (static export)"
 
 exit 0 
