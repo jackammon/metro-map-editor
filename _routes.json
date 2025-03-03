@@ -4,6 +4,9 @@
     "/*"
   ],
   "exclude": [
+    "/index.html",
+    "/200.html",
+    "/404.html",
     "/_next/*",
     "/static/*",
     "/api/*",
@@ -19,4 +22,4 @@
     "/*.css",
     "/*.js"
   ]
-} 
+}
