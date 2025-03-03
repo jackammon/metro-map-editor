@@ -253,6 +253,7 @@ export const MapCanvas: React.FC = () => {
               width={worldSettings.width}
               height={worldSettings.height}
               opacity={0.5}
+              alt="Background map image"
             />
           )}
           

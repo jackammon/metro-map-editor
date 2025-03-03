@@ -1,24 +1,31 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMetro } from '@/lib/context/metro-context';
-import { Station, Line } from '@/lib/types/metro-types';
+import { Station } from '@/lib/types/metro-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
-const stationSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
-  name: z.string().min(1, 'Name is required'),
-  zone: z.coerce.number().int().min(1, 'Zone must be at least 1'),
-});
+// Create schema validation with custom ID validation
+const createStationSchema = (existingStations: Station[], currentId?: string) => {
+  return z.object({
+    id: z.string().min(1, 'ID is required')
+      .refine(
+        (val) => !existingStations.some(station => station.id === val && station.id !== currentId), 
+        { message: 'Station ID must be unique' }
+      ),
+    name: z.string().min(1, 'Name is required'),
+    zone: z.coerce.number().int().min(1, 'Zone must be at least 1'),
+  });
+};
 
-type StationFormValues = z.infer<typeof stationSchema>;
+type StationFormValues = z.infer<ReturnType<typeof createStationSchema>>;
 
 interface StationFormProps {
   open: boolean;
@@ -35,7 +42,10 @@ export const StationForm: React.FC<StationFormProps> = ({
   position,
   isEditing = false,
 }) => {
-  const { addStation, updateStation, lines, updateLine } = useMetro();
+  const { addStation, updateStation, lines, updateLine, stations } = useMetro();
+
+  // Create a dynamic schema that has access to the current stations
+  const stationSchema = createStationSchema(stations, initialValues?.id);
 
   const form = useForm<StationFormValues>({
     resolver: zodResolver(stationSchema),
@@ -46,6 +56,14 @@ export const StationForm: React.FC<StationFormProps> = ({
     },
   });
 
+  // Auto-fill the ID field with the next available index + 1 when opening the form
+  useEffect(() => {
+    if (!isEditing && open) {
+      const nextId = (stations.length + 1).toString();
+      form.setValue('id', nextId);
+    }
+  }, [open, isEditing, stations.length, form]);
+
   // Get the lines this station is on
   const stationLines = isEditing && initialValues?.lines
     ? lines.filter(line => initialValues.lines?.includes(line.id))
@@ -54,15 +72,16 @@ export const StationForm: React.FC<StationFormProps> = ({
   const onSubmit = (values: StationFormValues) => {
     if (isEditing && initialValues?.id) {
       // Update existing station
-      updateStation({
-        ...initialValues,
+      const updatedStation: Station = {
+        ...(initialValues as Station),
         id: values.id,
         name: values.name,
         zone: values.zone,
-      });
+      };
+      updateStation(updatedStation);
     } else if (position) {
       // Add new station
-      addStation({
+      const newStation: Station = {
         id: values.id,
         name: values.name,
         x: position.x,
@@ -71,7 +90,8 @@ export const StationForm: React.FC<StationFormProps> = ({
         isInterchange: false,
         connections: [],
         lines: [],
-      });
+      };
+      addStation(newStation);
     }
     
     onOpenChange(false);

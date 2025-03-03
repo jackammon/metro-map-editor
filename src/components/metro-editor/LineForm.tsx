@@ -1,24 +1,31 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMetro } from '@/lib/context/metro-context';
-import { Line, Station } from '@/lib/types/metro-types';
+import { Line } from '@/lib/types/metro-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
-const lineSchema = z.object({
-  id: z.string().min(1, 'ID is required'),
-  name: z.string().min(1, 'Name is required'),
-  color: z.string().min(1, 'Color is required'),
-});
+// Create schema validation with custom ID validation
+const createLineSchema = (existingLines: Line[], currentId?: string) => {
+  return z.object({
+    id: z.string().min(1, 'ID is required')
+      .refine(
+        (val) => !existingLines.some(line => line.id === val && line.id !== currentId), 
+        { message: 'Line ID must be unique' }
+      ),
+    name: z.string().min(1, 'Name is required'),
+    color: z.string().min(1, 'Color is required'),
+  });
+};
 
-type LineFormValues = z.infer<typeof lineSchema>;
+type LineFormValues = z.infer<ReturnType<typeof createLineSchema>>;
 
 interface LineFormProps {
   open: boolean;
@@ -33,8 +40,11 @@ export const LineForm: React.FC<LineFormProps> = ({
   initialValues,
   isEditing = false,
 }) => {
-  const { addLine, updateLine, stations } = useMetro();
+  const { addLine, updateLine, stations, lines } = useMetro();
   const [color, setColor] = useState(initialValues?.color || '#FF0000');
+
+  // Create a dynamic schema that has access to the current lines
+  const lineSchema = createLineSchema(lines, initialValues?.id);
 
   const form = useForm<LineFormValues>({
     resolver: zodResolver(lineSchema),
@@ -45,6 +55,14 @@ export const LineForm: React.FC<LineFormProps> = ({
     },
   });
 
+  // Auto-fill the ID field with the next available index + 1 when opening the form
+  useEffect(() => {
+    if (!isEditing && open) {
+      const nextId = (lines.length + 1).toString();
+      form.setValue('id', nextId);
+    }
+  }, [open, isEditing, lines.length, form]);
+
   // Get the stations on this line
   const lineStations = isEditing && initialValues?.stations 
     ? stations.filter(station => initialValues.stations?.includes(station.id))
@@ -52,22 +70,27 @@ export const LineForm: React.FC<LineFormProps> = ({
 
   const onSubmit = (values: LineFormValues) => {
     if (isEditing && initialValues?.id) {
-      // Update existing line
-      updateLine({
-        ...initialValues,
-        id: values.id,
-        name: values.name,
-        color: values.color,
-        stations: initialValues.stations || [],
-      });
+      // Find the existing line to get all its properties
+      const existingLine = lines.find(line => line.id === initialValues.id);
+      if (existingLine) {
+        // Create a new line object with all required properties
+        const updatedLine: Line = {
+          id: values.id,
+          name: values.name,
+          color: values.color,
+          stations: existingLine.stations
+        };
+        updateLine(updatedLine);
+      }
     } else {
-      // Add new line
-      addLine({
+      // Add new line with required properties
+      const newLine: Line = {
         id: values.id,
         name: values.name,
         color: values.color,
-        stations: [],
-      });
+        stations: []
+      };
+      addLine(newLine);
     }
     
     onOpenChange(false);

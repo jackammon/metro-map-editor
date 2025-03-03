@@ -42,7 +42,7 @@ export const LinesList: React.FC = () => {
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
           {lines.length === 0 ? (
             <div className="text-center text-muted-foreground py-4">
-              No lines added yet. Click "Add Line" to create a new line.
+              No lines added yet. Click &quot;Add Line&quot; to create a new line.
             </div>
           ) : (
             lines.map(line => (

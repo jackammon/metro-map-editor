@@ -46,7 +46,7 @@ export const ExportPanel: React.FC = () => {
                 <li>Lines: {lines.length}</li>
               </ul>
               <p className="mt-2 text-xs text-muted-foreground">
-                Your data is automatically saved in your browser's local storage.
+                Your data is automatically saved in your browser&apos;s local storage.
               </p>
             </div>
             
@@ -67,7 +67,7 @@ export const ExportPanel: React.FC = () => {
             <Button
               variant="destructive"
               onClick={() => setShowResetDialog(true)}
-              className="w-full mt-4"
+              className="w-full"
               disabled={!hasData}
             >
               Reset All Data
