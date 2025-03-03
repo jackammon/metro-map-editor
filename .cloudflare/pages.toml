@@ -6,3 +6,9 @@ output_directory = "out"
 
 [build.environment]
 NODE_VERSION = "20.10.0"
+
+# Handle all routes with index.html for SPA support
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
