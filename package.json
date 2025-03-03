@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && cp _redirects out/ && cp _routes.json out/ && cp _headers out/ && cp 404.html out/ && cp 200.html out/ && cp index.html out/ && rm -rf .next/cache",
+    "build": "next build && cp -r out/* .next/static/",
     "start": "next start",
     "lint": "next lint"
   },
