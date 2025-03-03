@@ -125,7 +125,13 @@ export const MetroProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           : [...prev, stationId]
       );
     } else {
-      setSelectedStationIds([stationId]);
+      // Check if this is the only selected station - if so, deselect it
+      if (selectedStationIds.length === 1 && selectedStationIds[0] === stationId) {
+        setSelectedStationIds([]);
+      } else {
+        // Otherwise select just this station
+        setSelectedStationIds([stationId]);
+      }
     }
   };
 

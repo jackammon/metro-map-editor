@@ -18,13 +18,14 @@ export const StationsList: React.FC = () => {
 
   const handleDeleteStation = (stationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this station?')) {
-      deleteStation(stationId);
-    }
+    deleteStation(stationId);
   };
 
   const handleStationClick = (stationId: string, e: React.MouseEvent) => {
     const multiSelect = e.ctrlKey || e.metaKey;
+    // When a station is clicked, it will:
+    // - With Ctrl/Cmd: Toggle this station's selection without affecting others
+    // - Without modifier: Select only this station, or deselect it if it's already the only selected one
     selectStation(stationId, multiSelect);
   };
 

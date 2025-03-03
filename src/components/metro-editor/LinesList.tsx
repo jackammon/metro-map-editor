@@ -19,9 +19,7 @@ export const LinesList: React.FC = () => {
 
   const handleDeleteLine = (lineId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this line?')) {
-      deleteLine(lineId);
-    }
+    deleteLine(lineId);
   };
 
   const handleLineClick = (lineId: string) => {

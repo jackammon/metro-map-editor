@@ -39,7 +39,7 @@ export default function Home() {
         </div>
 
         <footer className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Metro Map Editor for Phaser Games</p>
+          <p>jck.codes</p>
         </footer>
       </div>
     </MetroProvider>

@@ -166,11 +166,12 @@ export const MapCanvas: React.FC = () => {
           addStationToLine(activeLineId, stationId);
         });
         
-        // Connect adjacent stations
+        // Connect stations in the order they were selected
         for (let i = 0; i < selectedStationIds.length - 1; i++) {
           connectStations(selectedStationIds[i], selectedStationIds[i + 1]);
         }
         
+        // Always clear selections after creating a line connection
         clearSelectedStations();
       } else if (!isDragging) {
         // Add new station at click position
@@ -190,13 +191,13 @@ export const MapCanvas: React.FC = () => {
       // If a line is active, add this station to the line
       addStationToLine(activeLineId, stationId);
       
-      // If we have selected stations, connect them
+      // Connect only to the most recently selected station if there is one
       if (selectedStationIds.length > 0) {
-        selectedStationIds.forEach(selectedId => {
-          connectStations(stationId, selectedId);
-        });
+        const mostRecentlySelectedId = selectedStationIds[selectedStationIds.length - 1];
+        connectStations(stationId, mostRecentlySelectedId);
       }
       
+      // Always toggle selection when clicked
       selectStation(stationId, true);
     } else {
       // Normal selection
@@ -274,42 +275,86 @@ export const MapCanvas: React.FC = () => {
             
             if (lineStations.length < 2) return null;
             
-            // Create points array for the line
-            const points = lineStations.flatMap(station => [station!.x, station!.y]);
+            // Track which connections we've already drawn to avoid duplicates
+            const drawnConnections = new Set<string>();
             
-            return (
-              <Line
-                key={line.id}
-                points={points}
-                stroke={line.color}
-                strokeWidth={4}
-                tension={0.3}
-                lineCap="round"
-                lineJoin="round"
-              />
-            );
+            // Create lines for each connection
+            const connectionLines = stations
+              .filter(station => line.stations.includes(station.id))
+              .flatMap(station => {
+                // For each station, get only its DIRECT connections
+                return station.connections
+                  // Only consider connections that are on this line
+                  .filter(connectedId => {
+                    // Must be part of this line
+                    return line.stations.includes(connectedId);
+                  })
+                  .map(connectedId => {
+                    // Create a unique key for this connection (sorted to ensure consistency)
+                    const stationIds = [station.id, connectedId].sort();
+                    const connectionKey = `${stationIds[0]}-${stationIds[1]}`;
+                    
+                    // Skip if we've already drawn this connection
+                    if (drawnConnections.has(connectionKey)) {
+                      return null;
+                    }
+                    
+                    // VERIFICATION: Double-check that both stations really are connected to each other
+                    const connectedStation = stations.find(s => s.id === connectedId);
+                    if (!connectedStation) return null;
+                    
+                    // Verify the bidirectional connection exists
+                    if (!connectedStation.connections.includes(station.id)) {
+                      console.warn(`Connection inconsistency detected: ${station.id} connects to ${connectedId} but not vice versa.`);
+                      return null;
+                    }
+                    
+                    // Mark this connection as drawn
+                    drawnConnections.add(connectionKey);
+                    
+                    // Return the line component for this direct connection
+                    return (
+                      <Line
+                        key={`${line.id}-${connectionKey}`}
+                        points={[station.x, station.y, connectedStation.x, connectedStation.y]}
+                        stroke={line.color}
+                        strokeWidth={4}
+                        lineCap="round"
+                        lineJoin="round"
+                      />
+                    );
+                  })
+                  .filter(Boolean);
+              });
+            
+            return <React.Fragment key={line.id}>{connectionLines}</React.Fragment>;
           })}
           
           {/* Stations */}
-          {stations.map(station => (
-            <Circle
-              key={station.id}
-              name="station"
-              x={station.x}
-              y={station.y}
-              radius={station.isInterchange ? 12 : 8}
-              fill="white"
-              stroke={station.isInterchange ? "black" : "#666"}
-              strokeWidth={2}
-              draggable
-              onClick={(e) => handleStationClick(station.id, e)}
-              onDragEnd={(e) => handleStationDragEnd(station.id, e)}
-              shadowColor="rgba(0,0,0,0.3)"
-              shadowBlur={5}
-              shadowOffset={{ x: 2, y: 2 }}
-              shadowOpacity={0.5}
-            />
-          ))}
+          {stations.map(station => {
+            // Check if this station is selected
+            const isSelected = selectedStationIds.includes(station.id);
+            
+            return (
+              <Circle
+                key={station.id}
+                name="station"
+                x={station.x}
+                y={station.y}
+                radius={station.isInterchange ? 12 : 8}
+                fill={isSelected ? "yellow" : "white"}
+                stroke={isSelected ? "#000" : (station.isInterchange ? "black" : "#666")}
+                strokeWidth={isSelected ? 3 : 2}
+                draggable
+                onClick={(e) => handleStationClick(station.id, e)}
+                onDragEnd={(e) => handleStationDragEnd(station.id, e)}
+                shadowColor="rgba(0,0,0,0.3)"
+                shadowBlur={5}
+                shadowOffset={{ x: 2, y: 2 }}
+                shadowOpacity={0.5}
+              />
+            );
+          })}
           
           {/* Selected stations highlight */}
           {selectedStationIds.map(id => {
