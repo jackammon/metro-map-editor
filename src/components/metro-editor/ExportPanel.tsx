@@ -69,6 +69,7 @@ export const ExportPanel: React.FC = () => {
               onClick={() => setShowResetDialog(true)}
               className="w-full"
               disabled={!hasData}
+              hidden={!hasData}
             >
               Reset All Data
             </Button>

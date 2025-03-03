@@ -15,7 +15,7 @@ export default function Home() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold">Metro Map Editor</h1>
           <p className="text-muted-foreground">
-            Design your metro map for Phaser games. Place stations, create lines, and export to CSV.
+            Design your metro map for 2D games. Place stations, create lines, and export to CSV.
           </p>
         </header>
 
