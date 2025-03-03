@@ -43,10 +43,6 @@ const nextConfig = {
     return config;
   },
   reactStrictMode: false,
-  // Handle module resolution for static export
-  experimental: {
-    appDir: true,
-  },
   // Disable source maps in production
   productionBrowserSourceMaps: false,
 };
