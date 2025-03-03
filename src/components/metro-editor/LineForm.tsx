@@ -5,11 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMetro } from '@/lib/context/metro-context';
-import { Line } from '@/lib/types/metro-types';
+import { Line, Station } from '@/lib/types/metro-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 const lineSchema = z.object({
   id: z.string().min(1, 'ID is required'),
@@ -32,7 +33,7 @@ export const LineForm: React.FC<LineFormProps> = ({
   initialValues,
   isEditing = false,
 }) => {
-  const { addLine, updateLine } = useMetro();
+  const { addLine, updateLine, stations } = useMetro();
   const [color, setColor] = useState(initialValues?.color || '#FF0000');
 
   const form = useForm<LineFormValues>({
@@ -43,6 +44,11 @@ export const LineForm: React.FC<LineFormProps> = ({
       color: initialValues?.color || '#FF0000',
     },
   });
+
+  // Get the stations on this line
+  const lineStations = isEditing && initialValues?.stations 
+    ? stations.filter(station => initialValues.stations?.includes(station.id))
+    : [];
 
   const onSubmit = (values: LineFormValues) => {
     if (isEditing && initialValues?.id) {
@@ -70,6 +76,16 @@ export const LineForm: React.FC<LineFormProps> = ({
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setColor(e.target.value);
     form.setValue('color', e.target.value);
+  };
+
+  const handleRemoveStation = (stationId: string) => {
+    if (isEditing && initialValues?.id) {
+      const updatedStations = initialValues.stations?.filter(id => id !== stationId) || [];
+      updateLine({
+        ...initialValues,
+        stations: updatedStations
+      });
+    }
   };
 
   return (
@@ -132,11 +148,28 @@ export const LineForm: React.FC<LineFormProps> = ({
             />
             
             {isEditing && initialValues?.stations && (
-              <div>
+              <div className="space-y-2">
                 <FormLabel>Stations</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  {initialValues.stations.length} stations on this line
-                </div>
+                {lineStations.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No stations on this line</div>
+                ) : (
+                  <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto">
+                    {lineStations.map(station => (
+                      <div key={station.id} className="flex justify-between items-center text-sm p-1 bg-secondary/30 rounded">
+                        <span>{station.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleRemoveStation(station.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             

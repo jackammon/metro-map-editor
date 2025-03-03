@@ -5,11 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMetro } from '@/lib/context/metro-context';
-import { Station } from '@/lib/types/metro-types';
+import { Station, Line } from '@/lib/types/metro-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 const stationSchema = z.object({
   id: z.string().min(1, 'ID is required'),
@@ -34,7 +35,7 @@ export const StationForm: React.FC<StationFormProps> = ({
   position,
   isEditing = false,
 }) => {
-  const { addStation, updateStation } = useMetro();
+  const { addStation, updateStation, lines, updateLine } = useMetro();
 
   const form = useForm<StationFormValues>({
     resolver: zodResolver(stationSchema),
@@ -44,6 +45,11 @@ export const StationForm: React.FC<StationFormProps> = ({
       zone: initialValues?.zone || 1,
     },
   });
+
+  // Get the lines this station is on
+  const stationLines = isEditing && initialValues?.lines
+    ? lines.filter(line => initialValues.lines?.includes(line.id))
+    : [];
 
   const onSubmit = (values: StationFormValues) => {
     if (isEditing && initialValues?.id) {
@@ -69,6 +75,21 @@ export const StationForm: React.FC<StationFormProps> = ({
     }
     
     onOpenChange(false);
+  };
+
+  const handleRemoveLine = (lineId: string) => {
+    if (isEditing && initialValues?.id) {
+      // Get the line
+      const line = lines.find(l => l.id === lineId);
+      if (line) {
+        // Update the line to remove this station
+        const updatedStations = line.stations.filter(id => id !== initialValues.id);
+        updateLine({
+          ...line,
+          stations: updatedStations
+        });
+      }
+    }
   };
 
   return (
@@ -132,6 +153,42 @@ export const StationForm: React.FC<StationFormProps> = ({
                   <FormLabel>Y Position</FormLabel>
                   <Input type="number" value={position.y} disabled />
                 </div>
+              </div>
+            )}
+            
+            {isEditing && initialValues?.lines && (
+              <div className="space-y-2">
+                <FormLabel>Lines</FormLabel>
+                {stationLines.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">This station is not on any lines</div>
+                ) : (
+                  <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto">
+                    {stationLines.map(line => (
+                      <div 
+                        key={line.id} 
+                        className="flex justify-between items-center text-sm p-1 rounded"
+                        style={{ backgroundColor: `${line.color}20` }}
+                      >
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: line.color }}
+                          ></div>
+                          <span>{line.name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleRemoveLine(line.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             
