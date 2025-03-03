@@ -40,7 +40,7 @@ export const LineForm: React.FC<LineFormProps> = ({
   initialValues,
   isEditing = false,
 }) => {
-  const { addLine, updateLine, stations, lines, connectStations, updateStation } = useMetro();
+  const { addLine, updateLine, stations, lines, updateStation } = useMetro();
   const [color, setColor] = useState(initialValues?.color || '#FF0000');
 
   // Create a dynamic schema that has access to the current lines
