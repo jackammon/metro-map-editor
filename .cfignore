@@ -1,0 +1,13 @@
+# Next.js build cache
+.next/cache/**
+.next/cache/webpack/**
+
+# Dependencies
+node_modules/
+
+# Non-production files
+.git/
+.github/
+.vscode/
+README.md
+*.log 
