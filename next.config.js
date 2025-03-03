@@ -8,7 +8,38 @@ const nextConfig = {
     if (isServer) {
       config.externals = [...(config.externals || []), 'canvas', 'konva'];
     }
-    config.optimization.minimize = true;
+    
+    // Optimize bundle size
+    config.optimization = {
+      ...config.optimization,
+      minimize: true,
+      splitChunks: {
+        chunks: 'all',
+        minSize: 20000,
+        maxSize: 24400000, // 24.4MB (just under the 25MB limit)
+        minChunks: 1,
+        maxAsyncRequests: 30,
+        maxInitialRequests: 30,
+        cacheGroups: {
+          defaultVendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            reuseExistingChunk: true,
+          },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+        },
+      },
+    };
+
+    // Remove source maps in production
+    if (!config.devtool) {
+      config.devtool = false;
+    }
+
     return config;
   },
   reactStrictMode: false,
@@ -16,6 +47,8 @@ const nextConfig = {
   experimental: {
     appDir: true,
   },
+  // Disable source maps in production
+  productionBrowserSourceMaps: false,
 };
 
 module.exports = nextConfig;

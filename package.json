@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && cp -r out/* .next/static/",
+    "build": "next build && cp -r out/* .next/static/ && find .next -name '*.map' -delete && find .next -name '*.txt' -delete",
     "start": "next start",
     "lint": "next lint"
   },
