@@ -5,12 +5,10 @@ const nextConfig = {
     // Handle the 'canvas' module issue
     if (isServer) {
       // This makes it not try to load the canvas module on the server
-      config.externals = [...(config.externals || []), 'canvas'];
+      config.externals = [...(config.externals || []), 'canvas', 'konva'];
     }
     return config;
   },
-  // Fix for "Module not found: Can't resolve 'canvas'" error
-  serverComponentsExternalPackages: ['canvas', 'konva'],
   reactStrictMode: true,
 };
 
