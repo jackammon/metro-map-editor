@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 export const BackgroundEditor: React.FC = () => {
-  const { gameMap, updateGameSettings } = useMapEditor();
+  const { gameMap, updateBackground } = useMapEditor();
   const background = gameMap?.background;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -20,15 +20,12 @@ export const BackgroundEditor: React.FC = () => {
         const imageUrl = e.target?.result as string;
         const img = new Image();
         img.onload = () => {
-          updateGameSettings({
-            ...gameMap?.gameSettings,
-            background: {
-              imageUrl,
-              width: img.width,
-              height: img.height,
-              scale: 1,
-              offset: { x: 0, y: 0 },
-            },
+          updateBackground({
+            imageUrl,
+            width: img.width,
+            height: img.height,
+            scale: 1,
+            offset: { x: 0, y: 0 },
           });
         };
         img.src = imageUrl;
@@ -38,7 +35,7 @@ export const BackgroundEditor: React.FC = () => {
   };
 
   const handleClearImage = () => {
-    updateGameSettings({ ...gameMap?.gameSettings, background: undefined });
+    updateBackground(undefined);
     if(fileInputRef.current) fileInputRef.current.value = "";
   };
   
@@ -52,7 +49,7 @@ export const BackgroundEditor: React.FC = () => {
     if(field === 'offsetX') newBackground.offset = { ...newBackground.offset, x: numValue };
     if(field === 'offsetY') newBackground.offset = { ...newBackground.offset, y: numValue };
     
-    updateGameSettings({ ...gameMap?.gameSettings, background: newBackground });
+    updateBackground(newBackground);
   }
 
   return (

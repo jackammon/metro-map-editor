@@ -16,6 +16,8 @@ import { Slider } from '@/components/ui/slider';
 
 const trackSchema = z.object({
   id: z.string().min(1, "ID is required"),
+  source: z.string().min(1, "Source station is required"),
+  target: z.string().min(1, "Target station is required"),
   distanceKm: z.coerce.number().min(0),
   speedType: z.nativeEnum(TrainSpeedType),
   bidirectional: z.boolean(),
@@ -23,14 +25,18 @@ const trackSchema = z.object({
   condition: z.nativeEnum(TrackCondition),
   powerType: z.nativeEnum(PowerType),
   scenicValue: z.number().min(0).max(100),
+}).refine((data) => data.source !== data.target, {
+  message: "Source and target stations must be different",
+  path: ["target"],
 });
 
 type TrackFormValues = z.infer<typeof trackSchema>;
 
 export const TrackEditor: React.FC = () => {
-  const { selectedTrackIds, getTrackById, updateTrack, clearSelection } = useMapEditor();
+  const { gameMap, selectedTrackIds, getTrackById, updateTrack, deleteTrack, addTrack, clearSelection } = useMapEditor();
   const isVisible = selectedTrackIds.length === 1;
   const track = isVisible ? getTrackById(selectedTrackIds[0]) : null;
+  const stations = gameMap?.railNetwork.stations || [];
 
   const form = useForm<TrackFormValues>({
     resolver: zodResolver(trackSchema),
@@ -40,6 +46,8 @@ export const TrackEditor: React.FC = () => {
     if (track) {
       form.reset({
         id: track.id,
+        source: track.source,
+        target: track.target,
         distanceKm: track.distanceKm,
         speedType: track.speedType,
         bidirectional: track.bidirectional,
@@ -52,8 +60,59 @@ export const TrackEditor: React.FC = () => {
   }, [track, form]);
 
   const onSubmit = (data: TrackFormValues) => {
+    if (!track || !gameMap) return;
+    
+    // Check if source/target changed and if a track with the new combination already exists
+    const sourceChanged = data.source !== track.source;
+    const targetChanged = data.target !== track.target;
+    
+    if (sourceChanged || targetChanged) {
+      const existingTrack = gameMap.railNetwork.tracks.find(
+        t => t.id !== track.id && (
+          (t.source === data.source && t.target === data.target) ||
+          (t.source === data.target && t.target === data.source)
+        )
+      );
+      
+      if (existingTrack) {
+        alert(`A track already exists between ${data.source} and ${data.target}`);
+        return;
+      }
+      
+      // When source/target changes, delete the old track and create a new one
+      // Calculate new distance based on station coordinates
+      const sourceStation = gameMap.railNetwork.stations.find(s => s.id === data.source);
+      const targetStation = gameMap.railNetwork.stations.find(s => s.id === data.target);
+      let newDistance = data.distanceKm;
+      
+      if (sourceStation && targetStation) {
+        const calculatedDistance = Math.sqrt(
+          Math.pow(targetStation.coordinates.x - sourceStation.coordinates.x, 2) +
+          Math.pow(targetStation.coordinates.y - sourceStation.coordinates.y, 2)
+        ) / 50; // Convert pixels to km (assuming 50px = 1km)
+        newDistance = parseFloat(calculatedDistance.toFixed(1));
+      }
+      
+      const newTrack: EnhancedTrack = {
+        ...track,
+        ...data,
+        id: `${data.source}-${data.target}`,
+        distanceKm: newDistance,
+      };
+      
+      deleteTrack(track.id);
+      addTrack(newTrack);
+    } else {
+      // If only other properties changed, just update the track
+      updateTrack(track.id, data);
+    }
+  };
+
+  const handleDelete = () => {
     if (!track) return;
-    updateTrack(track.id, data);
+    if (window.confirm(`Are you sure you want to delete the track between ${track.source} and ${track.target}?`)) {
+      deleteTrack(track.id);
+    }
   };
 
   if (!isVisible || !track) {
@@ -76,7 +135,6 @@ export const TrackEditor: React.FC = () => {
             <CardTitle>Edit Track</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => clearSelection()}>Close</Button>
         </div>
-        <p className="text-sm text-muted-foreground">From: {track.source} To: {track.target}</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -85,6 +143,40 @@ export const TrackEditor: React.FC = () => {
             <Input id="track-id" {...form.register('id')} />
             {form.formState.errors.id && <p className="text-red-500 text-xs mt-1">{form.formState.errors.id.message}</p>}
           </div>
+
+          <Controller name="source" control={form.control} render={({ field }) => (
+            <div>
+              <Label>Source Station</Label>
+              <Select key={`source-${track?.id}`} onValueChange={field.onChange} defaultValue={field.value}>
+                <SelectTrigger><SelectValue placeholder="Select source station" /></SelectTrigger>
+                <SelectContent>
+                  {stations.map(station => (
+                    <SelectItem key={station.id} value={station.id}>
+                      {station.name} ({station.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.source && <p className="text-red-500 text-xs mt-1">{form.formState.errors.source.message}</p>}
+            </div>
+          )}/>
+
+          <Controller name="target" control={form.control} render={({ field }) => (
+            <div>
+              <Label>Target Station</Label>
+              <Select key={`target-${track?.id}`} onValueChange={field.onChange} defaultValue={field.value}>
+                <SelectTrigger><SelectValue placeholder="Select target station" /></SelectTrigger>
+                <SelectContent>
+                  {stations.map(station => (
+                    <SelectItem key={station.id} value={station.id}>
+                      {station.name} ({station.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.target && <p className="text-red-500 text-xs mt-1">{form.formState.errors.target.message}</p>}
+            </div>
+          )}/>
           
           <div>
             <Label htmlFor="distance">Distance (km)</Label>
@@ -116,7 +208,10 @@ export const TrackEditor: React.FC = () => {
             <div><Label>Scenic Value: {field.value}</Label><Slider min={0} max={100} step={1} defaultValue={[field.value]} onValueChange={(value) => field.onChange(value[0])}/></div>
           )}/>
 
-          <Button type="submit" className="w-full">Save Changes</Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1">Save Changes</Button>
+            <Button type="button" variant="destructive" onClick={handleDelete}>Delete Track</Button>
+          </div>
         </form>
       </CardContent>
     </Card>

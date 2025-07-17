@@ -22,7 +22,7 @@ export const MapCanvas: React.FC = () => {
         selectedStationIds, selectStation,
         selectedTrackIds, selectTrack,
         getStationById, clearSelection,
-        updateGameSettings,
+        updateGameSettings, deleteStation, deleteTrack,
     } = useMapEditor();
     
     const [newStationPos, setNewStationPos] = useState<{ x: number; y: number } | null>(null);
@@ -42,7 +42,7 @@ export const MapCanvas: React.FC = () => {
     useEffect(() => {
         // Center map on load or map change
         if (gameMap && containerRef.current) {
-            const mapBounds = getMapBounds(stations);
+            const mapBounds = getMapBounds(gameMap.railNetwork.stations);
             const container = containerRef.current.getBoundingClientRect();
             
             const zoom = Math.min(
@@ -56,7 +56,7 @@ export const MapCanvas: React.FC = () => {
                 y: container.height / 2 - (mapBounds.y + mapBounds.height / 2) * zoom,
             });
         }
-    }, [gameMap?.id, stations]);
+    }, [gameMap?.id]);
 
 
     // --- Background Image Loading ---
@@ -73,54 +73,112 @@ export const MapCanvas: React.FC = () => {
         }
     }, [gameMap?.background]);
 
-    // --- Track Creation ---
-    useEffect(() => {
-        if (selectedStationIds.length === 2) {
-            const [sourceId, targetId] = selectedStationIds;
-            const sourceStation = getStationById(sourceId);
-            const targetStation = getStationById(targetId);
-
-            if (sourceStation && targetStation) {
-                // Check if a track already exists
-                const existingTrack = tracks.find(
-                    t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
-                );
-
-                if (!existingTrack) {
-                    const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
-                    
-                    const newTrack: EnhancedTrack = {
-                        id: `${sourceId}-${targetId}`,
-                        source: sourceId,
-                        target: targetId,
-                        distanceKm: parseFloat(distance.toFixed(1)),
-                        speedType: 'LOCAL',
-                        bidirectional: true,
-                        direction: 'both',
-                        condition: 'good',
-                        powerType: 'electric',
-                        scenicValue: 50
-                    };
-                    addTrack(newTrack);
-                }
-                // Deselect stations after creating track
-                clearSelection();
-            }
+    // --- Manual Track Creation Function ---
+    const createTrackBetweenSelectedStations = () => {
+        if (selectedStationIds.length !== 2) {
+            alert('Please select exactly two stations to create a track between them.');
+            return;
         }
-    }, [selectedStationIds, getStationById, addTrack, clearSelection, tracks]);
 
+        const [sourceId, targetId] = selectedStationIds;
+        const sourceStation = getStationById(sourceId);
+        const targetStation = getStationById(targetId);
+
+        if (sourceStation && targetStation) {
+            // Check if a track already exists
+            const existingTrack = tracks.find(
+                t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
+            );
+
+            if (existingTrack) {
+                alert(`A track already exists between ${sourceStation.name} and ${targetStation.name}`);
+                return;
+            }
+
+            const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
+            
+            const newTrack: EnhancedTrack = {
+                id: `${sourceId}-${targetId}`,
+                source: sourceId,
+                target: targetId,
+                distanceKm: parseFloat((distance / 50).toFixed(1)), // Convert pixels to km
+                speedType: 'LOCAL',
+                bidirectional: true,
+                direction: 'both',
+                condition: 'good',
+                powerType: 'electric',
+                scenicValue: 50
+            };
+            addTrack(newTrack);
+            
+            // Keep stations selected so user can see the new track
+            console.log(`Created track between ${sourceStation.name} and ${targetStation.name}`);
+        }
+    };
+
+    // --- Keyboard Event Handling ---
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                // Delete selected tracks
+                if (selectedTrackIds.length > 0) {
+                    selectedTrackIds.forEach(trackId => {
+                        const track = gameMap?.railNetwork.tracks.find(t => t.id === trackId);
+                        if (track && window.confirm(`Are you sure you want to delete the track between ${track.source} and ${track.target}?`)) {
+                            deleteTrack(trackId);
+                        }
+                    });
+                }
+                // Delete selected stations (and their connected tracks)
+                else if (selectedStationIds.length > 0) {
+                    selectedStationIds.forEach(stationId => {
+                        const station = getStationById(stationId);
+                        if (station && window.confirm(`Are you sure you want to delete station "${station.name}" and all its connected tracks?`)) {
+                            deleteStation(stationId);
+                        }
+                    });
+                }
+            }
+            else if (e.key === 'l' || e.key === 'L') {
+                // Create track between selected stations
+                e.preventDefault();
+                createTrackBetweenSelectedStations();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [selectedTrackIds, selectedStationIds, gameMap, deleteTrack, deleteStation, getStationById, createTrackBetweenSelectedStations]);
 
     // --- Event Handlers ---
 
     const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-        if (e.target === e.target.getStage()) {
-            // Clicked on empty stage
-            const pos = e.target.getStage().getPointerPosition();
+        // Check if we clicked on empty space (not on a station or track)
+        const stage = e.target.getStage();
+        if (!stage) return;
+        
+        // If the target is the Layer, Grid, or Background Image (empty space), create a station
+        const isEmptySpace = e.target.className === 'Layer' || e.target.className === 'Rect' || e.target.className === 'Image';
+        console.log('Layer clicked, empty space:', isEmptySpace, 'target className:', e.target.className);
+        
+        if (isEmptySpace) {
+            const pos = stage.getPointerPosition();
+            console.log('Pointer position:', pos);
+            console.log('Stage position:', stage.x(), stage.y());
+            console.log('Stage scale:', stage.scaleX(), stage.scaleY());
+            
             if(pos) {
-                setNewStationPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+                // Convert screen coordinates to world coordinates
+                const worldPos = {
+                    x: Math.round((pos.x - stage.x()) / stage.scaleX()),
+                    y: Math.round((pos.y - stage.y()) / stage.scaleY())
+                };
+                console.log('Calculated world position:', worldPos);
+                setNewStationPos(worldPos);
             }
-            clearSelection();
         }
+        
+        clearSelection();
     };
     
     const handleStationClick = (e: Konva.KonvaEventObject<MouseEvent>, stationId: string) => {
@@ -196,21 +254,20 @@ export const MapCanvas: React.FC = () => {
                 scaleY={effectiveStageScale}
                 draggable
                 onWheel={handleWheel}
-                onClick={handleStageClick}
             >
-                <Layer>
+                <Layer onClick={handleStageClick}>
                     {/* Grid */}
                     {adminSettings?.gridSnap?.enabled && (
-                        <Rect x={-5000} y={-5000} width={10000} height={10000} fillPatternImage={createGridPattern(adminSettings.gridSnap.size)} />
+                        <Rect x={-5000} y={-5000} width={10000} height={10000} fillPatternImage={createGridPattern(adminSettings.gridSnap.size) as any} />
                     )}
                     {/* Render Background */}
-                    {backgroundImage && background && (
+                    {backgroundImage && gameMap?.background && (
                         <KonvaImage
                             image={backgroundImage}
-                            x={background.offset?.x || 0}
-                            y={background.offset?.y || 0}
-                            scaleX={background.scale || 1}
-                            scaleY={background.scale || 1}
+                            x={gameMap.background.offset?.x || 0}
+                            y={gameMap.background.offset?.y || 0}
+                            scaleX={gameMap.background.scale || 1}
+                            scaleY={gameMap.background.scale || 1}
                             opacity={0.5}
                         />
                     )}
@@ -280,7 +337,10 @@ export const MapCanvas: React.FC = () => {
             
             {newStationPos && (
                 <StationCreator
-                    position={newStationPos}
+                    position={{
+                        x: newStationPos.x * stageScale + stagePos.x,
+                        y: newStationPos.y * stageScale + stagePos.y
+                    }}
                     onClose={() => setNewStationPos(null)}
                 />
             )}
@@ -288,7 +348,7 @@ export const MapCanvas: React.FC = () => {
     );
 };
 
-const createGridPattern = (size: number) => {
+const createGridPattern = (size: number): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;

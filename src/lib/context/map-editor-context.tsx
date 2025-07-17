@@ -7,7 +7,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { GameMap, EnhancedStation, EnhancedTrack, MapMetadata, GameSettings, AdminSettings } from '../types/metro-types';
+import { GameMap, EnhancedStation, EnhancedTrack, MapMetadata, GameSettings, AdminSettings, MapBackground } from '../types/metro-types';
 import { saveToLocalStorage, loadFromLocalStorage } from '../utils/storage-utils';
 
 // --- HELPER: CREATE A DEFAULT EMPTY MAP ---
@@ -63,6 +63,7 @@ interface MapEditorContextType {
   updateMapMetadata: (updates: Partial<MapMetadata>) => void;
   updateGameSettings: (updates: Partial<GameSettings>) => void;
   updateAdminSettings: (updates: Partial<AdminSettings>) => void;
+  updateBackground: (background: MapBackground | undefined) => void;
   
   // Selection Actions
   selectStation: (stationId: string, multiSelect?: boolean) => void;
@@ -256,6 +257,16 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
         })
     }
     
+    const updateBackground = (background: MapBackground | undefined) => {
+        setGameMap(prevMap => {
+            if (!prevMap) return null;
+            return {
+                ...prevMap,
+                background
+            }
+        })
+    }
+    
     
   // --- SELECTION ACTIONS ---
 
@@ -325,6 +336,7 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
     updateMapMetadata,
     updateGameSettings,
     updateAdminSettings,
+    updateBackground,
     selectStation,
     selectTrack,
     clearSelection,

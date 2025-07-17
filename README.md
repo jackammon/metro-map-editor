@@ -59,9 +59,10 @@ A standalone, data-driven tool for designing and exporting complex rail networks
 
 ### 4. Create and Edit Tracks
 
-- **Create a track**: Select two stations on the canvas (hold `Ctrl`/`Cmd` to select the second station). A track will automatically be created between them.
+- **Create a track**: Select two stations on the canvas (hold `Ctrl`/`Cmd` to select the second station), then press the `L` key to create a track between them.
 - **Select a track**: Click on a track on the canvas.
-- **Edit a track**: With a single track selected, use the **Track Editor** panel to modify its properties, such as speed type, direction, and condition.
+- **Edit a track**: With a single track selected, use the **Track Editor** panel to modify its properties, such as speed type, direction, and condition. You can also change which stations the track connects between using the source and target station dropdowns.
+- **Delete a track**: With a track selected, click the "Delete Track" button in the **Track Editor** panel, or press the `Delete` key.
 
 ### 5. Use the Editor Tools
 
@@ -76,8 +77,10 @@ A standalone, data-driven tool for designing and exporting complex rail networks
 ## Keyboard Shortcuts
 
 - **`Ctrl`/`Cmd` + Click**: Select multiple stations.
+- **`L`**: Create a track between two selected stations.
 - **Click and Drag Canvas**: Pan the camera.
 - **Mouse Wheel**: Zoom the camera in and out.
+- **`Delete` or `Backspace`**: Delete selected stations or tracks (with confirmation).
 
 ## Tech Stack
 
