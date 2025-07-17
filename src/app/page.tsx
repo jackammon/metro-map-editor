@@ -19,9 +19,9 @@ export default function Home() {
     <MapEditorProvider>
       <div className="container mx-auto py-8 px-4">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold">Metro Map Editor</h1>
+          <h1 className="text-3xl font-bold">Map Editor</h1>
           <p className="text-muted-foreground">
-            Design your metro map for Phaser games. Place stations, create lines, and export to a TS file.
+            Design your map for my game. Place stations, create lines, and export to a TS file.
           </p>
         </header>
 
@@ -51,7 +51,7 @@ export default function Home() {
         </div>
 
         <footer className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Metro Map Editor for Phaser Games</p>
+          <p>jck.codes</p>
         </footer>
       </div>
     </MapEditorProvider>

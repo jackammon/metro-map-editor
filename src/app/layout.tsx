@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Metro Map Editor for Phaser Games",
-  description: "Design metro maps with stations and lines for your Phaser games",
+  title: "Map Editor for My Tranist Game",
+  description: "Design and edit maps with stations and lines",
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
