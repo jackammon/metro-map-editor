@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,10 +47,23 @@ export const StationEditor: React.FC = () => {
     }
   }, [station, form]);
 
-  const onSubmit = (data: StationFormValues) => {
+  const formValues = form.watch();
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
     if (!station) return;
-    updateStation(station.id, data);
-  };
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(() => {
+      const data = form.getValues();
+      updateStation(station.id, data);
+    }, 500);
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [formValues, station, updateStation]);
 
   if (!isVisible || !station) {
     return (
@@ -74,7 +87,7 @@ export const StationEditor: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form className="space-y-4">
           <div>
             <Label htmlFor="station-id">ID</Label>
             <Input id="station-id" {...form.register('id')} />
@@ -150,7 +163,7 @@ export const StationEditor: React.FC = () => {
              {form.formState.errors.services && <p className="text-red-500 text-xs mt-1">{form.formState.errors.services.message}</p>}
           </div>
 
-          <Button type="submit" className="w-full">Save Changes</Button>
+          <span className="block text-center text-green-600">Changes auto-saved</span>
         </form>
       </CardContent>
     </Card>

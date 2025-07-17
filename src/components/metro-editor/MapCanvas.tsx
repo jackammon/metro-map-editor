@@ -5,7 +5,8 @@ import { Stage, Layer, Circle, Line as KonvaLine, Text, Image as KonvaImage, Rec
 import Konva from 'konva';
 import { useMapEditor } from '@/lib/context/map-editor-context';
 import { EnhancedStation, EnhancedTrack } from '@/lib/types/metro-types';
-import { StationCreator } from './StationCreator.tsx';
+import { Button } from '@/components/ui/button';
+import { StationCreator } from './StationCreator';
 
 // Utility to calculate distance
 const calculateDistance = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
@@ -29,7 +30,6 @@ export const MapCanvas: React.FC = () => {
     const [newStationPos, setNewStationPos] = useState<{ x: number; y: number } | null>(null);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const [stageScale, setStageScale] = useState(1);
-    const [pixelPreview, setPixelPreview] = useState(false);
     
     const stageRef = useRef<Konva.Stage>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -39,10 +39,9 @@ export const MapCanvas: React.FC = () => {
     const tracks = useMemo(() => gameMap?.railNetwork.tracks || [], [gameMap]);
     const adminSettings = useMemo(() => gameMap?.adminSettings, [gameMap]);
 
-    // --- Camera & Initialization ---
-    useEffect(() => {
-        // Center map on load or map change
-        if (gameMap && containerRef.current) {
+    const resetCamera = () => {
+        if (gameMap && containerRef.current && stageRef.current) {
+            const stage = stageRef.current;
             const mapBounds = getMapBounds(gameMap.railNetwork.stations);
             const container = containerRef.current.getBoundingClientRect();
             
@@ -51,12 +50,25 @@ export const MapCanvas: React.FC = () => {
                 container.height / mapBounds.height
             ) * 0.8;
 
-            setStageScale(zoom);
-            setStagePos({
+            const newPos = {
                 x: container.width / 2 - (mapBounds.x + mapBounds.width / 2) * zoom,
                 y: container.height / 2 - (mapBounds.y + mapBounds.height / 2) * zoom,
-            });
+            };
+
+            // Imperatively set scale and position
+            stage.scale({ x: zoom, y: zoom });
+            stage.position(newPos);
+            stage.batchDraw();
+
+            // Also update state to keep it in sync
+            setStageScale(zoom);
+            setStagePos(newPos);
         }
+    };
+
+    // --- Camera & Initialization ---
+    useEffect(() => {
+        resetCamera();
     }, [gameMap?.id]);
 
 
@@ -294,7 +306,7 @@ export const MapCanvas: React.FC = () => {
 
     if (!gameMap) return <div className="w-full h-full bg-gray-200 flex items-center justify-center"><p>Loading map...</p></div>;
     
-    const renderScale = pixelPreview ? BASE_RENDER_SCALE : WORLD_UNITS_PER_KM;
+    const renderScale = WORLD_UNITS_PER_KM;
     const effectiveStageScale = stageScale * renderScale;
 
     return (
@@ -369,6 +381,7 @@ export const MapCanvas: React.FC = () => {
                                         onDragEnd={(e) => {
                                             const newX = e.target.x();
                                             const newY = e.target.y();
+                                            if (!track.points) return;
                                             const updatedPoints = [...track.points];
                                             updatedPoints[index + 1] = { x: newX, y: newY };
                                             updateTrack(track.id, { points: updatedPoints });
@@ -412,11 +425,8 @@ export const MapCanvas: React.FC = () => {
 
                 </Layer>
             </Stage>
-            <div className="absolute top-2 right-2 bg-white p-2 rounded shadow">
-                <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" checked={pixelPreview} onChange={e => setPixelPreview(e.target.checked)} />
-                    <span>Pixel Preview (x{BASE_RENDER_SCALE})</span>
-                </label>
+            <div className="absolute top-2 right-2 rounded">
+                <Button onClick={resetCamera} variant="outline" size="sm">Reset Camera</Button>
             </div>
             
             {newStationPos && (

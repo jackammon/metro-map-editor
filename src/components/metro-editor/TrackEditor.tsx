@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -68,64 +68,53 @@ export const TrackEditor: React.FC = () => {
     name: 'points',
   });
 
-  const onSubmit = (data: TrackFormValues) => {
+  const formValues = form.watch();
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
     if (!track || !gameMap) return;
-    
-    const sourceStation = gameMap.railNetwork.stations.find(s => s.id === data.source);
-    const targetStation = gameMap.railNetwork.stations.find(s => s.id === data.target);
-    if (!sourceStation || !targetStation) return;
 
-    let finalPoints = data.points || [];
-    if (finalPoints.length === 0) {
-      finalPoints = [sourceStation.coordinates, targetStation.coordinates];
-    } else {
-      // Ensure endpoints match stations
-      finalPoints[0] = sourceStation.coordinates;
-      finalPoints[finalPoints.length - 1] = targetStation.coordinates;
-    }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-    // Recalculate distance based on points
-    let newDistance = 0;
-    for (let i = 0; i < finalPoints.length - 1; i++) {
-      const p1 = finalPoints[i];
-      const p2 = finalPoints[i + 1];
-      newDistance += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) / 50;
-    }
-    newDistance = parseFloat(newDistance.toFixed(1));
+    debounceTimer.current = setTimeout(() => {
+      const data = form.getValues();
+      const sourceChanged = data.source !== track.source;
+      const targetChanged = data.target !== track.target;
 
-    const sourceChanged = data.source !== track.source;
-    const targetChanged = data.target !== track.target;
-    
-    if (sourceChanged || targetChanged) {
-      const existingTrack = gameMap.railNetwork.tracks.find(
-        t => t.id !== track.id && (
-          (t.source === data.source && t.target === data.target) ||
-          (t.source === data.target && t.target === data.source)
-        )
-      );
-      
-      if (existingTrack) {
-        alert(`A track already exists between ${data.source} and ${data.target}`);
-        return;
+      const sourceStation = gameMap.railNetwork.stations.find(s => s.id === data.source);
+      const targetStation = gameMap.railNetwork.stations.find(s => s.id === data.target);
+      if (!sourceStation || !targetStation) return;
+
+      let finalPoints = data.points || [];
+      if (finalPoints.length === 0) {
+        finalPoints = [sourceStation.coordinates, targetStation.coordinates];
+      } else {
+        finalPoints[0] = sourceStation.coordinates;
+        finalPoints[finalPoints.length - 1] = targetStation.coordinates;
       }
-      
-      // When source/target changes, delete the old track and create a new one
-      // Calculate new distance based on station coordinates
-      const newTrack: EnhancedTrack = {
-        ...track,
-        ...data,
-        id: `${data.source}-${data.target}`,
-        distanceKm: newDistance,
-        points: finalPoints,
-      };
-      
-      deleteTrack(track.id);
-      addTrack(newTrack);
-    } else {
-      // If only other properties changed, just update the track
-      updateTrack(track.id, { ...data, points: finalPoints, distanceKm: newDistance });
-    }
-  };
+
+      let newDistance = 0;
+      for (let i = 0; i < finalPoints.length - 1; i++) {
+        const p1 = finalPoints[i];
+        const p2 = finalPoints[i + 1];
+        newDistance += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) / 50;
+      }
+      newDistance = parseFloat(newDistance.toFixed(1));
+
+      if (sourceChanged || targetChanged) {
+        // Removed existingTrack check to allow multiple tracks between same stations
+        const newTrackData = { ...track, ...data, id: `${data.source}-${data.target}-${Date.now()}`, distanceKm: newDistance, points: finalPoints };
+        deleteTrack(track.id);
+        addTrack(newTrackData);
+      } else {
+        updateTrack(track.id, { ...data, distanceKm: newDistance, points: finalPoints });
+      }
+    }, 500);
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [formValues, track, gameMap, updateTrack, deleteTrack, addTrack]);
 
   const handleDelete = () => {
     if (!track) return;
@@ -156,7 +145,7 @@ export const TrackEditor: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form className="space-y-4">
           <div>
             <Label htmlFor="track-id">ID</Label>
             <Input id="track-id" {...form.register('id')} />
@@ -257,7 +246,7 @@ export const TrackEditor: React.FC = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" className="flex-1">Save Changes</Button>
+            <span className="flex-1 text-green-600">Changes auto-saved</span>
             <Button type="button" variant="destructive" onClick={handleDelete}>Delete Track</Button>
           </div>
         </form>
