@@ -1,389 +1,306 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Stage, Layer, Circle, Line, Image } from 'react-konva';
-import { useMetro } from '@/lib/context/metro-context';
-import { StationForm } from './StationForm';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Stage, Layer, Circle, Line as KonvaLine, Text, Image as KonvaImage, Rect } from 'react-konva';
 import Konva from 'konva';
+import { useMapEditor } from '@/lib/context/map-editor-context';
+import { EnhancedStation, EnhancedTrack } from '@/lib/types/metro-types';
+import { StationCreator } from './StationCreator';
+
+// Utility to calculate distance
+const calculateDistance = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+}
+
+const WORLD_UNITS_PER_KM = 1;
+const BASE_RENDER_SCALE = 50; // For pixel preview
 
 export const MapCanvas: React.FC = () => {
-  const {
-    stations,
-    lines,
-    worldSettings,
-    selectedStationIds,
-    activeLineId,
-    selectStation,
-    clearSelectedStations,
-    updateStation,
-    connectStations,
-    addStationToLine,
-    updateWorldSettings
-  } = useMetro();
-
-  const [stageScale, setStageScale] = useState(worldSettings.cameraPosition?.scale || 1);
-  const [stagePosition, setStagePosition] = useState({ 
-    x: worldSettings.cameraPosition?.x || 0, 
-    y: worldSettings.cameraPosition?.y || 0 
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const [newStationPosition, setNewStationPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isStationFormOpen, setIsStationFormOpen] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
-  const stageRef = useRef<Konva.Stage>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInitialCentering = useRef(true);
-
-  // Load background image when it changes
-  useEffect(() => {
-    if (worldSettings.backgroundImage) {
-      const image = new window.Image();
-      image.src = worldSettings.backgroundImage;
-      image.onload = () => {
-        setBackgroundImage(image);
-      };
-    } else {
-      setBackgroundImage(null);
-    }
-  }, [worldSettings.backgroundImage]);
-
-  // Update camera position from worldSettings when it changes
-  useEffect(() => {
-    if (worldSettings.cameraPosition) {
-      setStageScale(worldSettings.cameraPosition.scale);
-      setStagePosition({
-        x: worldSettings.cameraPosition.x,
-        y: worldSettings.cameraPosition.y
-      });
-    }
-  }, [worldSettings.cameraPosition]);
-
-  // Center the world initially if no camera position is saved
-  useEffect(() => {
-    if (isInitialCentering.current && containerRef.current && !worldSettings.cameraPosition) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const containerHeight = containerRef.current.offsetHeight;
-      
-      // Calculate center position
-      const centerX = containerWidth / 2 - (worldSettings.width / 2) * stageScale;
-      const centerY = containerHeight / 2 - (worldSettings.height / 2) * stageScale;
-      
-      setStagePosition({ x: centerX, y: centerY });
-      isInitialCentering.current = false;
-    }
-  }, [worldSettings.width, worldSettings.height, stageScale, worldSettings.cameraPosition]);
-
-  // Save camera position when it changes
-  useEffect(() => {
-    // Debounce to avoid too many updates
-    const debounceTimer = setTimeout(() => {
-      updateWorldSettings({
-        cameraPosition: {
-          x: stagePosition.x,
-          y: stagePosition.y,
-          scale: stageScale
-        }
-      });
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-  }, [stagePosition, stageScale, updateWorldSettings]);
-
-  // Adjust stage size based on container size
-  useEffect(() => {
-    const resizeStage = () => {
-      if (containerRef.current && stageRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        const containerHeight = containerRef.current.offsetHeight;
-        
-        stageRef.current.width(containerWidth);
-        stageRef.current.height(containerHeight);
-      }
-    };
-
-    resizeStage();
-    window.addEventListener('resize', resizeStage);
+    const {
+        gameMap,
+        addStation, updateStation, addTrack,
+        selectedStationIds, selectStation,
+        selectedTrackIds, selectTrack,
+        getStationById, clearSelection,
+        updateGameSettings,
+    } = useMapEditor();
     
-    return () => {
-      window.removeEventListener('resize', resizeStage);
-    };
-  }, []);
+    const [newStationPos, setNewStationPos] = useState<{ x: number; y: number } | null>(null);
+    const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+    const [stageScale, setStageScale] = useState(1);
+    const [pixelPreview, setPixelPreview] = useState(false);
+    
+    const stageRef = useRef<Konva.Stage>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
 
-  const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    
-    const stage = stageRef.current;
-    if (!stage) return;
+    const stations = useMemo(() => gameMap?.railNetwork.stations || [], [gameMap]);
+    const tracks = useMemo(() => gameMap?.railNetwork.tracks || [], [gameMap]);
+    const adminSettings = useMemo(() => gameMap?.adminSettings, [gameMap]);
 
-    const oldScale = stageScale;
-    const pointer = stage.getPointerPosition();
-    
-    if (!pointer) return;
-    
-    const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
-    };
+    // --- Camera & Initialization ---
+    useEffect(() => {
+        // Center map on load or map change
+        if (gameMap && containerRef.current) {
+            const mapBounds = getMapBounds(stations);
+            const container = containerRef.current.getBoundingClientRect();
+            
+            const zoom = Math.min(
+                container.width / mapBounds.width,
+                container.height / mapBounds.height
+            ) * 0.8;
 
-    // Calculate new scale
-    const newScale = e.evt.deltaY < 0 ? oldScale * 1.1 : oldScale / 1.1;
-    
-    // Limit scale
-    const limitedScale = Math.max(0.1, Math.min(newScale, 5));
-    setStageScale(limitedScale);
-
-    // Calculate new position
-    const newPos = {
-      x: pointer.x - mousePointTo.x * limitedScale,
-      y: pointer.y - mousePointTo.y * limitedScale,
-    };
-    
-    setStagePosition(newPos);
-  };
-
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Get click position relative to the stage
-    const stage = stageRef.current;
-    if (!stage) return;
-    
-    const clickPos = stage.getPointerPosition();
-    if (!clickPos) return;
-    
-    // Convert to world coordinates
-    const worldPos = {
-      x: (clickPos.x - stage.x()) / stageScale,
-      y: (clickPos.y - stage.y()) / stageScale,
-    };
-    
-    // Check if clicked on empty space
-    const clickedOnStation = e.target.name() === 'station';
-    
-    if (!clickedOnStation) {
-      // If we have selected stations and active line, connect them
-      if (selectedStationIds.length >= 2 && activeLineId) {
-        // Connect all selected stations to the active line
-        selectedStationIds.forEach(stationId => {
-          addStationToLine(activeLineId, stationId);
-        });
-        
-        // Connect stations in the order they were selected
-        for (let i = 0; i < selectedStationIds.length - 1; i++) {
-          connectStations(selectedStationIds[i], selectedStationIds[i + 1]);
-        }
-        
-        // Always clear selections after creating a line connection
-        clearSelectedStations();
-      } else if (!isDragging) {
-        // Add new station at click position
-        setNewStationPosition(worldPos);
-        setIsStationFormOpen(true);
-        clearSelectedStations();
-      }
-    }
-  };
-
-  const handleStationClick = (stationId: string, e: Konva.KonvaEventObject<MouseEvent>) => {
-    e.cancelBubble = true; // Prevent stage click
-    
-    const multiSelect = e.evt.ctrlKey || e.evt.metaKey;
-    
-    if (activeLineId) {
-      // If a line is active, add this station to the line
-      addStationToLine(activeLineId, stationId);
-      
-      // Connect only to the most recently selected station if there is one
-      if (selectedStationIds.length > 0) {
-        const mostRecentlySelectedId = selectedStationIds[selectedStationIds.length - 1];
-        connectStations(stationId, mostRecentlySelectedId);
-      }
-      
-      // Always toggle selection when clicked
-      selectStation(stationId, true);
-    } else {
-      // Normal selection
-      selectStation(stationId, multiSelect);
-    }
-  };
-
-  const handleStationDragEnd = (stationId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    const station = stations.find(s => s.id === stationId);
-    if (!station) return;
-    
-    // Update station position
-    updateStation({
-      ...station,
-      x: e.target.x(),
-      y: e.target.y(),
-    });
-  };
-
-  return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full border rounded-md overflow-hidden bg-gray-100"
-      style={{ height: 'calc(100vh - 200px)' }}
-    >
-      <Stage
-        ref={stageRef}
-        width={containerRef.current?.offsetWidth || worldSettings.width}
-        height={containerRef.current?.offsetHeight || worldSettings.height}
-        scaleX={stageScale}
-        scaleY={stageScale}
-        x={stagePosition.x}
-        y={stagePosition.y}
-        draggable
-        onWheel={handleWheel}
-        onClick={handleStageClick}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={() => {
-          setIsDragging(false);
-          // Update stage position when drag ends
-          if (stageRef.current) {
-            setStagePosition({
-              x: stageRef.current.x(),
-              y: stageRef.current.y()
+            setStageScale(zoom);
+            setStagePos({
+                x: container.width / 2 - (mapBounds.x + mapBounds.width / 2) * zoom,
+                y: container.height / 2 - (mapBounds.y + mapBounds.height / 2) * zoom,
             });
-          }
-        }}
-      >
-        <Layer>
-          {/* Background */}
-          {backgroundImage && (
-            <Image
-              image={backgroundImage}
-              width={worldSettings.width}
-              height={worldSettings.height}
-              opacity={0.5}
-              alt="Background map image"
-            />
-          )}
-          
-          {/* World boundary */}
-          <Line
-            points={[0, 0, worldSettings.width, 0, worldSettings.width, worldSettings.height, 0, worldSettings.height, 0, 0]}
-            stroke="#999"
-            strokeWidth={2}
-            dash={[10, 5]}
-          />
-          
-          {/* Lines between stations */}
-          {lines.map(line => {
-            // Get all stations in this line
-            const lineStations = line.stations
-              .map(id => stations.find(s => s.id === id))
-              .filter(Boolean);
-            
-            if (lineStations.length < 2) return null;
-            
-            // Track which connections we've already drawn to avoid duplicates
-            const drawnConnections = new Set<string>();
-            
-            // Create lines for each connection
-            const connectionLines = stations
-              .filter(station => line.stations.includes(station.id))
-              .flatMap(station => {
-                // For each station, get only its DIRECT connections
-                return station.connections
-                  // Only consider connections that are on this line
-                  .filter(connectedId => {
-                    // Must be part of this line
-                    return line.stations.includes(connectedId);
-                  })
-                  .map(connectedId => {
-                    // Create a unique key for this connection (sorted to ensure consistency)
-                    const stationIds = [station.id, connectedId].sort();
-                    const connectionKey = `${stationIds[0]}-${stationIds[1]}`;
+        }
+    }, [gameMap?.id, stations]);
+
+
+    // --- Background Image Loading ---
+    useEffect(() => {
+        const bg = gameMap?.background;
+        if (bg?.imageUrl) {
+            const image = new window.Image();
+            image.src = bg.imageUrl;
+            image.onload = () => {
+                setBackgroundImage(image);
+            };
+        } else {
+            setBackgroundImage(null);
+        }
+    }, [gameMap?.background]);
+
+    // --- Track Creation ---
+    useEffect(() => {
+        if (selectedStationIds.length === 2) {
+            const [sourceId, targetId] = selectedStationIds;
+            const sourceStation = getStationById(sourceId);
+            const targetStation = getStationById(targetId);
+
+            if (sourceStation && targetStation) {
+                // Check if a track already exists
+                const existingTrack = tracks.find(
+                    t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
+                );
+
+                if (!existingTrack) {
+                    const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
                     
-                    // Skip if we've already drawn this connection
-                    if (drawnConnections.has(connectionKey)) {
-                      return null;
-                    }
-                    
-                    // VERIFICATION: Double-check that both stations really are connected to each other
-                    const connectedStation = stations.find(s => s.id === connectedId);
-                    if (!connectedStation) return null;
-                    
-                    // Verify the bidirectional connection exists
-                    if (!connectedStation.connections.includes(station.id)) {
-                      console.warn(`Connection inconsistency detected: ${station.id} connects to ${connectedId} but not vice versa.`);
-                      return null;
-                    }
-                    
-                    // Mark this connection as drawn
-                    drawnConnections.add(connectionKey);
-                    
-                    // Return the line component for this direct connection
-                    return (
-                      <Line
-                        key={`${line.id}-${connectionKey}`}
-                        points={[station.x, station.y, connectedStation.x, connectedStation.y]}
-                        stroke={line.color}
-                        strokeWidth={4}
-                        lineCap="round"
-                        lineJoin="round"
-                      />
-                    );
-                  })
-                  .filter(Boolean);
-              });
-            
-            return <React.Fragment key={line.id}>{connectionLines}</React.Fragment>;
-          })}
-          
-          {/* Stations */}
-          {stations.map(station => {
-            // Check if this station is selected
-            const isSelected = selectedStationIds.includes(station.id);
-            
-            return (
-              <Circle
-                key={station.id}
-                name="station"
-                x={station.x}
-                y={station.y}
-                radius={station.isInterchange ? 12 : 8}
-                fill={isSelected ? "yellow" : "white"}
-                stroke={isSelected ? "#000" : (station.isInterchange ? "black" : "#666")}
-                strokeWidth={isSelected ? 3 : 2}
+                    const newTrack: EnhancedTrack = {
+                        id: `${sourceId}-${targetId}`,
+                        source: sourceId,
+                        target: targetId,
+                        distanceKm: parseFloat(distance.toFixed(1)),
+                        speedType: 'LOCAL',
+                        bidirectional: true,
+                        direction: 'both',
+                        condition: 'good',
+                        powerType: 'electric',
+                        scenicValue: 50
+                    };
+                    addTrack(newTrack);
+                }
+                // Deselect stations after creating track
+                clearSelection();
+            }
+        }
+    }, [selectedStationIds, getStationById, addTrack, clearSelection, tracks]);
+
+
+    // --- Event Handlers ---
+
+    const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        if (e.target === e.target.getStage()) {
+            // Clicked on empty stage
+            const pos = e.target.getStage().getPointerPosition();
+            if(pos) {
+                setNewStationPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+            }
+            clearSelection();
+        }
+    };
+    
+    const handleStationClick = (e: Konva.KonvaEventObject<MouseEvent>, stationId: string) => {
+        e.cancelBubble = true;
+        const multiSelect = e.evt.ctrlKey || e.evt.metaKey;
+        selectStation(stationId, multiSelect);
+    };
+
+    const handleTrackClick = (e: Konva.KonvaEventObject<MouseEvent>, trackId: string) => {
+        e.cancelBubble = true;
+        selectTrack(trackId, false); // Tracks don't support multiselect for now
+    }
+    
+    const handleStationDragEnd = (e: Konva.KonvaEventObject<DragEvent>, stationId: string) => {
+        updateStation(stationId, {
+            coordinates: {
+                x: Math.round(e.target.x()),
+                y: Math.round(e.target.y()),
+            }
+        });
+    }
+
+    const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
+        e.evt.preventDefault();
+        const stage = stageRef.current;
+        if (!stage) return;
+        
+        const oldScale = stage.scaleX();
+        const pointer = stage.getPointerPosition();
+        if(!pointer) return;
+
+        const mousePointTo = {
+            x: (pointer.x - stage.x()) / oldScale,
+            y: (pointer.y - stage.y()) / oldScale,
+        };
+        
+        const newScale = e.evt.deltaY > 0 ? oldScale * 1.1 : oldScale / 1.1;
+        setStageScale(newScale);
+
+        const newPos = {
+            x: pointer.x - mousePointTo.x * newScale,
+            y: pointer.y - mousePointTo.y * newScale,
+        };
+        setStagePos(newPos);
+    };
+
+    const getMapBounds = (stations: EnhancedStation[]) => {
+        if (stations.length === 0) return { x: 0, y: 0, width: 1000, height: 1000 };
+        const coords = stations.map(s => s.coordinates);
+        const xs = coords.map(c => c.x);
+        const ys = coords.map(c => c.y);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        const maxX = Math.max(...xs);
+        const maxY = Math.max(...ys);
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
+
+    if (!gameMap) return <div className="w-full h-full bg-gray-200 flex items-center justify-center"><p>Loading map...</p></div>;
+    
+    const renderScale = pixelPreview ? BASE_RENDER_SCALE : WORLD_UNITS_PER_KM;
+    const effectiveStageScale = stageScale * renderScale;
+
+    return (
+        <div ref={containerRef} className="w-full h-full border rounded-md overflow-hidden bg-gray-100 relative">
+            <Stage
+                ref={stageRef}
+                width={containerRef.current?.clientWidth}
+                height={containerRef.current?.clientHeight}
+                x={stagePos.x}
+                y={stagePos.y}
+                scaleX={effectiveStageScale}
+                scaleY={effectiveStageScale}
                 draggable
-                onClick={(e) => handleStationClick(station.id, e)}
-                onDragEnd={(e) => handleStationDragEnd(station.id, e)}
-                shadowColor="rgba(0,0,0,0.3)"
-                shadowBlur={5}
-                shadowOffset={{ x: 2, y: 2 }}
-                shadowOpacity={0.5}
-              />
-            );
-          })}
-          
-          {/* Selected stations highlight */}
-          {selectedStationIds.map(id => {
-            const station = stations.find(s => s.id === id);
-            if (!station) return null;
+                onWheel={handleWheel}
+                onClick={handleStageClick}
+            >
+                <Layer>
+                    {/* Grid */}
+                    {adminSettings?.gridSnap?.enabled && (
+                        <Rect x={-5000} y={-5000} width={10000} height={10000} fillPatternImage={createGridPattern(adminSettings.gridSnap.size)} />
+                    )}
+                    {/* Render Background */}
+                    {backgroundImage && background && (
+                        <KonvaImage
+                            image={backgroundImage}
+                            x={background.offset?.x || 0}
+                            y={background.offset?.y || 0}
+                            scaleX={background.scale || 1}
+                            scaleY={background.scale || 1}
+                            opacity={0.5}
+                        />
+                    )}
+
+                    {/* Render Tracks */}
+                    {tracks.map(track => {
+                        const source = getStationById(track.source);
+                        const target = getStationById(track.target);
+                        if (!source || !target) return null;
+
+                        const isSelected = selectedTrackIds.includes(track.id);
+
+                        return (
+                            <KonvaLine
+                                key={track.id}
+                                points={[
+                                    source.coordinates.x, source.coordinates.y,
+                                    target.coordinates.x, target.coordinates.y,
+                                ]}
+                                stroke={isSelected ? '#ff00ff' : '#000000'}
+                                strokeWidth={isSelected ? 6 : 4}
+                                hitStrokeWidth={12} // makes it easier to click
+                                onClick={(e) => handleTrackClick(e, track.id)}
+                            />
+                        );
+                    })}
+
+                    {/* Render Stations */}
+                    {stations.map(station => {
+                        const isSelected = selectedStationIds.includes(station.id);
+                        return (
+                            <Circle
+                                key={station.id}
+                                x={station.coordinates.x}
+                                y={station.coordinates.y}
+                                radius={station.type === 'large' ? 12 : station.type === 'medium' ? 9 : 6}
+                                fill={isSelected ? 'yellow' : 'white'}
+                                stroke="black"
+                                strokeWidth={2}
+                                draggable
+                                onClick={(e) => handleStationClick(e, station.id)}
+                                onDragEnd={(e) => handleStationDragEnd(e, station.id)}
+                            />
+                        );
+                    })}
+                    
+                    {/* Render Station Names */}
+                     {stations.map(station => (
+                        <Text
+                            key={`${station.id}-label`}
+                            x={station.coordinates.x + 15}
+                            y={station.coordinates.y - 10}
+                            text={station.name}
+                            fontSize={12}
+                            fill="#333"
+                        />
+                     ))}
+
+                </Layer>
+            </Stage>
+            <div className="absolute top-2 right-2 bg-white p-2 rounded shadow">
+                <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" checked={pixelPreview} onChange={e => setPixelPreview(e.target.checked)} />
+                    <span>Pixel Preview (x{BASE_RENDER_SCALE})</span>
+                </label>
+            </div>
             
-            return (
-              <Circle
-                key={`selection-${id}`}
-                x={station.x}
-                y={station.y}
-                radius={station.isInterchange ? 16 : 12}
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dash={[5, 2]}
-              />
-            );
-          })}
-        </Layer>
-      </Stage>
-      
-      {/* Station form for adding new stations */}
-      {newStationPosition && (
-        <StationForm
-          open={isStationFormOpen}
-          onOpenChange={setIsStationFormOpen}
-          position={newStationPosition}
-        />
-      )}
-    </div>
-  );
-}; 
+            {newStationPos && (
+                <StationCreator
+                    position={newStationPos}
+                    onClose={() => setNewStationPos(null)}
+                />
+            )}
+        </div>
+    );
+};
+
+const createGridPattern = (size: number) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+    if(context){
+        context.strokeStyle = '#e0e0e0';
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(size, 0);
+        context.lineTo(size, size);
+        context.lineTo(0, size);
+        context.stroke();
+    }
+    return canvas;
+} 

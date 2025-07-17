@@ -1,101 +1,44 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useMetro } from '@/lib/context/metro-context';
-import { exportMetroMapData } from '@/lib/utils/export-utils';
+import React from 'react';
+import { useMapEditor } from '@/lib/context/map-editor-context';
+import { exportMapToTypeScript } from '@/lib/utils/export-utils';
+import { validateMap } from '@/lib/utils/validation-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertTriangle } from 'lucide-react';
 
 export const ExportPanel: React.FC = () => {
-  const { getMetroMapData, stations, lines, resetToDefault } = useMetro();
-  const [showResetDialog, setShowResetDialog] = useState(false);
+  const { gameMap } = useMapEditor();
 
   const handleExport = () => {
-    const data = getMetroMapData();
-    exportMetroMapData(data);
+    if (gameMap) {
+      exportMapToTypeScript(gameMap);
+    }
   };
-
-  const handleResetData = () => {
-    resetToDefault();
-    setShowResetDialog(false);
-  };
-
-  const isExportDisabled = stations.length === 0;
-  const hasData = stations.length > 0 || lines.length > 0;
+  
+  const validationErrors = gameMap ? validateMap(gameMap) : [];
+  const hasErrors = validationErrors.some(e => e.severity === 'error');
 
   return (
-    <>
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Data Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="text-sm">
-              <p>Export your metro map data to CSV format for use in your Phaser game.</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Stations: {stations.length}</li>
-                <li>Lines: {lines.length}</li>
-              </ul>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Your data is automatically saved in your browser&apos;s local storage.
-              </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Export Map</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Button onClick={handleExport} className="w-full" disabled={!gameMap || hasErrors}>
+          Export to TypeScript
+        </Button>
+        {hasErrors && (
+            <div className="flex items-center space-x-2 text-red-600 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <p>Fix validation errors before exporting.</p>
             </div>
-            
-            <Button
-              onClick={handleExport}
-              className="w-full"
-              disabled={isExportDisabled}
-            >
-              Export to CSV
-            </Button>
-            
-            {isExportDisabled && (
-              <p className="text-sm text-muted-foreground">
-                Add at least one station before exporting.
-              </p>
-            )}
-            
-            <Button
-              variant="destructive"
-              onClick={() => setShowResetDialog(true)}
-              className="w-full"
-              disabled={!hasData}
-              hidden={!hasData}
-            >
-              Reset All Data
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Reset confirmation dialog */}
-      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset All Data</DialogTitle>
-            <DialogDescription>
-              This will delete all stations, lines, and settings. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex space-x-2 justify-end">
-            <Button variant="outline" onClick={() => setShowResetDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleResetData}>
-              Reset All Data
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+         {!gameMap && (
+            <p className="text-sm text-muted-foreground">Load a map to export.</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }; 

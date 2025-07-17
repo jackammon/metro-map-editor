@@ -1,17 +1,14 @@
 # Metro Map Editor for Phaser Games
 
-This tool enables you to specify game world dimensions, upload a background image, place stations on a canvas, create connection lines between stations, and export the data to CSV for integration into your game.
+A standalone, data-driven tool for designing and exporting complex rail networks for use in Phaser-based train simulation games. This editor allows for the creation of stations, tracks, and map-level metadata, all conforming to the `GameMap` schema.
 
-## Features
+## Core Features
 
-- **World Setup**: Configure game world dimensions (width and height)
-- **Background Image**: Upload and display a background image for reference
-- **Station Placement**: Click on the canvas to add stations with properties (ID, name, zone)
-- **Draggable Stations**: Easily adjust station positions by dragging
-- **Line Creation**: Create metro lines with custom colors
-- **Station Connections**: Connect stations to form metro lines
-- **Interchange Detection**: Automatically mark stations that belong to multiple lines
-- **Data Export**: Export all data to CSV format for use in Phaser games
+- **Data-Driven Design**: The entire editor is built around the `GameMap` schema, ensuring that all created data is valid and ready for use in-game.
+- **Station & Track Editing**: Create, move, and delete stations and tracks with a rich set of editable properties, including station type, importance, services, track speed, condition, and more.
+- **Map Management**: Load existing maps from a data collection, or create new maps from scratch. All work is automatically saved to local storage.
+- **Visual Feedback**: The editor provides real-time visual feedback, including a grid, pixel preview, and validation status.
+- **TypeScript Export**: Export your map data to a TypeScript file, ready to be imported into your game.
 
 ## Getting Started
 
@@ -42,43 +39,50 @@ This tool enables you to specify game world dimensions, upload a background imag
 
 ## How to Use
 
-### Setting Up the World
+### 1. Load or Create a Map
 
-1. Use the sliders in the World Settings panel to set the width and height of your game world
-2. Click "Apply Dimensions" to update the canvas
-3. Optionally upload a background image for reference
+- Use the **Map Loader** panel to either select an existing map from the dropdown or click **Create New Map** to start from a blank canvas.
+- Your progress is automatically saved to your browser's local storage.
 
-### Adding Stations
+### 2. Edit Map Metadata
 
-1. Click anywhere on the canvas to add a new station
-2. Fill in the station details (ID, name, zone)
-3. The station will appear on the canvas and in the Stations list
+- Use the **Map Metadata** panel to edit the map's name, region, description, and other high-level properties.
 
-### Creating Lines
+### 3. Place and Edit Stations
 
-1. Click "Add Line" in the Lines panel
-2. Fill in the line details (ID, name, color)
-3. Select the line from the list to make it active
-4. Click on stations to add them to the line
+- **Create a station**: Click on an empty area of the canvas. A form will appear to enter the station's ID and name.
+- **Select a station**: Click on a station in the **Stations** list or on the canvas.
+- **Edit a station**: With a single station selected, use the **Station Editor** panel to modify its properties, such as type, importance, platforms, and services.
+- **Move a station**: Click and drag a station on the canvas.
+- **Delete a station**: Click the "Del" button next to a station in the **Stations** list.
 
-### Connecting Stations
+### 4. Create and Edit Tracks
 
-1. Select multiple stations by holding Ctrl/Cmd while clicking on them
-2. With a line active, the selected stations will be connected in the order they were selected
+- **Create a track**: Select two stations on the canvas (hold `Ctrl`/`Cmd` to select the second station). A track will automatically be created between them.
+- **Select a track**: Click on a track on the canvas.
+- **Edit a track**: With a single track selected, use the **Track Editor** panel to modify its properties, such as speed type, direction, and condition.
 
-### Exporting Data
+### 5. Use the Editor Tools
 
-1. Once you've created your metro map, click "Export to CSV" in the Export panel
-2. The CSV file will be downloaded, ready to be used in your Phaser game
+- **Background Image**: Upload an image to use as a visual guide for your map.
+- **Editor Settings**: Toggle grid snapping, layer visibility, and other editor preferences.
+- **Validation Panel**: Keep an eye on the validation status to ensure your map data is valid.
+
+### 6. Export Your Map
+
+- Once you're finished, click **Export to TypeScript** in the **Export Map** panel. This will download a `.ts` file containing your map data, ready to be imported into your game.
 
 ## Keyboard Shortcuts
 
-- **Ctrl/Cmd + Click**: Select multiple stations
-- **Click and Drag**: Move the canvas view
-- **Mouse Wheel**: Zoom in/out
+- **`Ctrl`/`Cmd` + Click**: Select multiple stations.
+- **Click and Drag Canvas**: Pan the camera.
+- **Mouse Wheel**: Zoom the camera in and out.
 
-## Acknowledgments
+## Tech Stack
 
-- Built with Next.js, React, and Konva
-- UI components from shadcn/ui
-- CSV export using PapaParse
+- **Framework**: Next.js (React)
+- **UI**: shadcn/ui
+- **Canvas**: react-konva
+- **State Management**: React Context
+- **Validation**: Zod
+- **File Export**: file-saver

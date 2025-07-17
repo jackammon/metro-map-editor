@@ -1,28 +1,37 @@
 "use client";
 
 import React from 'react';
-import { MetroProvider } from '@/lib/context/metro-context';
-import { WorldSettings } from '@/components/metro-editor/WorldSettings';
-import { StationsList } from '@/components/metro-editor/StationsList';
-import { LinesList } from '@/components/metro-editor/LinesList';
-import { KonvaCanvas } from '@/components/metro-editor/KonvaCanvas';
+import { MapEditorProvider } from '@/lib/context/map-editor-context';
+import { MapSelector } from '@/components/metro-editor/MapSelector';
+import { MetadataEditor } from '@/components/metro-editor/MetadataEditor';
+import { EditorSettingsPanel } from '@/components/metro-editor/EditorSettingsPanel';
+import { BackgroundEditor } from '@/components/metro-editor/BackgroundEditor';
+import { ValidationPanel } from '@/components/metro-editor/ValidationPanel';
 import { ExportPanel } from '@/components/metro-editor/ExportPanel';
+import { StationsList } from '@/components/metro-editor/StationsList';
+import { StationEditor } from '@/components/metro-editor/StationEditor';
+import { TrackEditor } from '@/components/metro-editor/TrackEditor';
+import { KonvaCanvas } from '@/components/metro-editor/KonvaCanvas';
 
 export default function Home() {
   return (
-    <MetroProvider>
+    <MapEditorProvider>
       <div className="container mx-auto py-8 px-4">
         <header className="mb-8">
           <h1 className="text-3xl font-bold">Metro Map Editor</h1>
           <p className="text-muted-foreground">
-            Design your metro map for 2D games. Place stations, create lines, and export to CSV.
+            Design your metro map for Phaser games. Place stations, create lines, and export to a TS file.
           </p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <WorldSettings />
+            <MapSelector />
+            <MetadataEditor />
+            <EditorSettingsPanel />
+            <BackgroundEditor />
+            <ValidationPanel />
             <ExportPanel />
           </div>
 
@@ -34,14 +43,15 @@ export default function Home() {
           {/* Right sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <StationsList />
-            <LinesList />
+            <StationEditor />
+            <TrackEditor />
           </div>
         </div>
 
         <footer className="mt-8 text-center text-sm text-muted-foreground">
-          <p>jck.codes</p>
+          <p>Metro Map Editor for Phaser Games</p>
         </footer>
       </div>
-    </MetroProvider>
+    </MapEditorProvider>
   );
 }

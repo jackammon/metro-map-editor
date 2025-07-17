@@ -10,13 +10,17 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",
+    "@radix-ui/react-checkbox": "^1.3.2",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slider": "^1.2.3",
-    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.5",
+    "@types/file-saver": "^2.0.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "file-saver": "^2.0.5",
     "konva": "^9.3.18",
     "lucide-react": "^0.477.0",
     "next": "15.2.0",
@@ -43,6 +47,6 @@
     "typescript": "^5"
   },
   "engines": {
-  "node": "^18.18.0 || ^19.8.0 || >=20.0.0"
-}
+    "node": "^18.18.0 || ^19.8.0 || >=20.0.0"
+  }
 }

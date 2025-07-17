@@ -1,40 +1,53 @@
-"use client";
+/**
+ * @fileoverview Provides functionality to export the GameMap object
+ * as a TypeScript file.
+ */
 
-import Papa from 'papaparse';
-import { MetroMapData, Station } from '../types/metro-types';
+import { GameMap } from '../types/metro-types';
+import { saveAs } from 'file-saver';
 
-// Convert station data to CSV format
-export const stationsToCSV = (stations: Station[]): string => {
-  const csvData = stations.map(station => ({
-    id: station.id,
-    name: station.name,
-    x: station.x,
-    y: station.y,
-    zone: station.zone,
-    isInterchange: station.isInterchange ? 'true' : 'false',
-    connections: JSON.stringify(station.connections),
-    lines: JSON.stringify(station.lines)
-  }));
-
-  return Papa.unparse(csvData);
+/**
+ * Converts a JavaScript object into a TypeScript string representation.
+ * This is a simplified version; a more robust solution might handle more edge cases.
+ * @param obj The object to stringify.
+ * @returns A string representation of the object.
+ */
+const objectToTsString = (obj: any): string => {
+  // Using JSON.stringify with a replacer function for better formatting.
+  // The 'null, 2' arguments add indentation for readability.
+  return JSON.stringify(obj, null, 2);
 };
 
-// Export the entire metro map data
-export const exportMetroMapData = (data: MetroMapData): void => {
-  const csvString = stationsToCSV(data.stations);
+/**
+ * Generates the full content of the TypeScript file for a given GameMap.
+ * @param gameMap The GameMap data to export.
+ * @returns A string containing the TypeScript file content.
+ */
+const generateTsContent = (gameMap: GameMap): string => {
+  const mapVariableName = gameMap.id.replace(/-/g, '_'); // e.g., 'south-korea' -> 'south_korea'
   
-  // Create a blob and download link
-  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+  const content = `
+import { GameMap } from '@/lib/types/metro-types'; // Adjust this import path as needed
+
+export const ${mapVariableName}: GameMap = ${objectToTsString(gameMap)};
+`;
   
-  // Create a temporary link and trigger download
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', 'metro_map_data.csv');
-  document.body.appendChild(link);
-  link.click();
+  return content.trim();
+};
+
+/**
+ * Triggers a browser download for the generated TypeScript map file.
+ * @param gameMap The GameMap data to export.
+ */
+export const exportMapToTypeScript = (gameMap: GameMap) => {
+  if (!gameMap) {
+    console.error("Export failed: No map data available.");
+    return;
+  }
   
-  // Clean up
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const tsContent = generateTsContent(gameMap);
+  const blob = new Blob([tsContent], { type: 'application/typescript;charset=utf-8' });
+  const fileName = `${gameMap.id}.ts`;
+  
+  saveAs(blob, fileName);
 }; 

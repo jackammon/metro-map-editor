@@ -1,103 +1,71 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useMetro } from '@/lib/context/metro-context';
+import React from 'react';
+import { useMapEditor } from '@/lib/context/map-editor-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StationForm } from './StationForm';
 
 export const StationsList: React.FC = () => {
-  const { stations, deleteStation, selectStation, selectedStationIds } = useMetro();
-  const [editingStation, setEditingStation] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { gameMap, selectStation, selectedStationIds, deleteStation } = useMapEditor();
 
-  const handleEditStation = (stationId: string) => {
-    setEditingStation(stationId);
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteStation = (stationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    deleteStation(stationId);
-  };
-
-  const handleStationClick = (stationId: string, e: React.MouseEvent) => {
+  const handleStationClick = (e: React.MouseEvent, stationId: string) => {
     const multiSelect = e.ctrlKey || e.metaKey;
-    // When a station is clicked, it will:
-    // - With Ctrl/Cmd: Toggle this station's selection without affecting others
-    // - Without modifier: Select only this station, or deselect it if it's already the only selected one
     selectStation(stationId, multiSelect);
   };
+  
+  const handleDelete = (e: React.MouseEvent, stationId: string) => {
+    e.stopPropagation(); // Prevent the click from selecting the station
+    if (window.confirm('Are you sure you want to delete this station and all its connected tracks?')) {
+        deleteStation(stationId);
+    }
+  }
 
-  const stationToEdit = stations.find(station => station.id === editingStation);
+  if (!gameMap) return null;
+
+  const { stations } = gameMap.railNetwork;
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Stations</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-lg">Stations</CardTitle>
         <div className="text-sm text-muted-foreground">
-          {stations.length} stations
+          {stations.length} total
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
           {stations.length === 0 ? (
             <div className="text-center text-muted-foreground py-4">
-              No stations added yet. Click on the canvas to add stations.
+              No stations yet. Click on the map to add one.
             </div>
           ) : (
             stations.map(station => (
               <div
                 key={station.id}
-                className={`p-3 border rounded-md flex justify-between items-center cursor-pointer ${
-                  selectedStationIds.includes(station.id) ? 'bg-primary/10 border-primary' : ''
+                className={`p-3 border rounded-md cursor-pointer transition-all ${
+                  selectedStationIds.includes(station.id)
+                    ? 'bg-primary/10 border-primary shadow-md'
+                    : 'hover:bg-muted/50'
                 }`}
-                onClick={(e) => handleStationClick(station.id, e)}
+                onClick={(e) => handleStationClick(e, station.id)}
               >
-                <div>
-                  <div className="font-medium">{station.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    ID: {station.id} | Zone: {station.zone} | Pos: ({Math.round(station.x)}, {Math.round(station.y)})
-                  </div>
-                  {station.isInterchange && (
-                    <div className="text-xs mt-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block">
-                      Interchange
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="font-bold">{station.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                            ID: {station.id} | Type: {station.type}
+                        </div>
                     </div>
-                  )}
+                    <Button variant="destructive" size="sm" onClick={(e) => handleDelete(e, station.id)}>
+                        Del
+                    </Button>
                 </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditStation(station.id);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={(e) => handleDeleteStation(station.id, e)}
-                  >
-                    Delete
-                  </Button>
-                </div>
+
               </div>
             ))
           )}
         </div>
       </CardContent>
-
-      {stationToEdit && (
-        <StationForm
-          open={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          initialValues={stationToEdit}
-          isEditing={true}
-        />
-      )}
     </Card>
   );
 }; 
