@@ -137,8 +137,8 @@ export interface GameSettings {
   };
   theme?: {
     backgroundColor?: number;
-    trackStyles?: Record<string, any>;
-    stationStyles?: Record<string, any>;
+    trackStyles?: Record<string, unknown>;
+    stationStyles?: Record<string, unknown>;
   };
 }
 
@@ -149,8 +149,8 @@ export interface EditHistoryEntry {
   objectType: 'station' | 'track' | 'background' | 'map';
   objectId?: string;
   description: string;
-  beforeState?: any;
-  afterState?: any;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
 }
 
 export interface AdminSettings {

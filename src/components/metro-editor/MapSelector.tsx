@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { mapCollection, defaultMapId } from '@/data/maps';
+import { mapCollection } from '@/data/maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

@@ -13,19 +13,23 @@ export const EditorSettingsPanel: React.FC = () => {
   const adminSettings = gameMap?.adminSettings;
 
   const handleGridSnapChange = (enabled: boolean) => {
-    updateAdminSettings({ gridSnap: { ...adminSettings?.gridSnap, enabled } });
+    updateAdminSettings({ gridSnap: { enabled, size: adminSettings?.gridSnap?.size ?? 10 } });
   };
   
   const handleGridSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const size = parseInt(e.target.value, 10);
     if (!isNaN(size) && size > 0) {
-      updateAdminSettings({ gridSnap: { ...adminSettings?.gridSnap, size } });
+      updateAdminSettings({ gridSnap: { enabled: adminSettings?.gridSnap?.enabled ?? false, size } });
     }
   };
   
   const handleLayerVisibilityChange = (layer: string, visible: boolean) => {
     updateAdminSettings({
       layers: {
+        background: adminSettings?.layers?.background ?? true,
+        stations: adminSettings?.layers?.stations ?? true,
+        tracks: adminSettings?.layers?.tracks ?? true,
+        grid: adminSettings?.layers?.grid ?? true,
         ...adminSettings?.layers,
         [layer]: visible,
       },

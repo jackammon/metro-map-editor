@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { GameMap } from '@/lib/types/metro-types';
-import { validate } from 'uuid';
 import { validateMap } from '@/lib/utils/validation-utils';
 
 export const ImportPanel: React.FC = () => {

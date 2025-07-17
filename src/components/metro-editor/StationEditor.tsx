@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedStation, StationType, TrainSpeedType } from '@/lib/types/metro-types';
+import { StationType, TrainSpeedType } from '@/lib/types/metro-types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,7 +63,7 @@ export const StationEditor: React.FC = () => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [formValues, station, updateStation]);
+  }, [formValues, station, updateStation, form]);
 
   if (!isVisible || !station) {
     return (

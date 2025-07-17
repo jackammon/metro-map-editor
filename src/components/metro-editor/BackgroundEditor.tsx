@@ -44,10 +44,10 @@ export const BackgroundEditor: React.FC = () => {
     const numValue = parseFloat(value);
     if(isNaN(numValue)) return;
     
-    let newBackground = { ...background };
+    const newBackground = { ...background };
     if(field === 'scale') newBackground.scale = numValue;
-    if(field === 'offsetX') newBackground.offset = { ...newBackground.offset, x: numValue };
-    if(field === 'offsetY') newBackground.offset = { ...newBackground.offset, y: numValue };
+    if(field === 'offsetX') newBackground.offset = { ...newBackground.offset, x: numValue, y: newBackground.offset?.y || 0 };
+    if(field === 'offsetY') newBackground.offset = { ...newBackground.offset, y: numValue, x: newBackground.offset?.x || 0 };
     
     updateBackground(newBackground);
   }

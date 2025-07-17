@@ -5,7 +5,7 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedTrack, TrainSpeedType, TrackDirection, TrackCondition, PowerType } from '@/lib/types/metro-types';
+import { TrainSpeedType, TrackDirection, TrackCondition, PowerType } from '@/lib/types/metro-types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -114,7 +114,7 @@ export const TrackEditor: React.FC = () => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [formValues, track, gameMap, updateTrack, deleteTrack, addTrack]);
+  }, [formValues, track, gameMap, updateTrack, deleteTrack, addTrack, form]);
 
   const handleDelete = () => {
     if (!track) return;

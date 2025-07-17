@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedStation, StationType, TrainSpeedType } from '@/lib/types/metro-types';
+import { EnhancedStation } from '@/lib/types/metro-types';
 
 interface StationCreatorProps {
   position: { x: number; y: number };

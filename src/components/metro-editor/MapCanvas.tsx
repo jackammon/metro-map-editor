@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Stage, Layer, Circle, Line as KonvaLine, Text, Image as KonvaImage, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedStation, EnhancedTrack } from '@/lib/types/metro-types';
+import { EnhancedStation, EnhancedTrack, Coordinates } from '@/lib/types/metro-types';
 import { Button } from '@/components/ui/button';
 import { StationCreator } from './StationCreator';
 
@@ -14,32 +14,32 @@ const calculateDistance = (p1: {x: number, y: number}, p2: {x: number, y: number
 }
 
 const WORLD_UNITS_PER_KM = 1;
-const BASE_RENDER_SCALE = 50; // For pixel preview
 
 export const MapCanvas: React.FC = () => {
     const {
         gameMap,
-        addStation, updateStation, addTrack,
+        updateStation, addTrack,
         selectedStationIds, selectStation,
         selectedTrackIds, selectTrack,
         getStationById, clearSelection,
-        updateGameSettings, deleteStation, deleteTrack,
-        updateTrack, // Add this
+        deleteStation, deleteTrack,
+        updateTrack, 
     } = useMapEditor();
     
-    const [newStationPos, setNewStationPos] = useState<{ x: number; y: number } | null>(null);
+    const [newStationPos, setNewStationPos] = useState<Coordinates | null>(null);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const [stageScale, setStageScale] = useState(1);
     
     const stageRef = useRef<Konva.Stage>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
+    const [gridPatternImage, setGridPatternImage] = useState<HTMLImageElement | null>(null);
 
     const stations = useMemo(() => gameMap?.railNetwork.stations || [], [gameMap]);
     const tracks = useMemo(() => gameMap?.railNetwork.tracks || [], [gameMap]);
     const adminSettings = useMemo(() => gameMap?.adminSettings, [gameMap]);
 
-    const resetCamera = () => {
+    const resetCamera = useCallback(() => {
         if (gameMap && containerRef.current && stageRef.current) {
             const stage = stageRef.current;
             const mapBounds = getMapBounds(gameMap.railNetwork.stations);
@@ -64,12 +64,12 @@ export const MapCanvas: React.FC = () => {
             setStageScale(zoom);
             setStagePos(newPos);
         }
-    };
+    }, [gameMap]);
 
     // --- Camera & Initialization ---
     useEffect(() => {
         resetCamera();
-    }, [gameMap?.id]);
+    }, [gameMap?.id, gameMap, resetCamera]);
 
 
     // --- Background Image Loading ---
@@ -86,51 +86,66 @@ export const MapCanvas: React.FC = () => {
         }
     }, [gameMap?.background]);
 
-    // --- Manual Track Creation Function ---
-    const createTrackBetweenSelectedStations = () => {
-        if (selectedStationIds.length !== 2) {
-            alert('Please select exactly two stations to create a track between them.');
-            return;
-        }
-
-        const [sourceId, targetId] = selectedStationIds;
-        const sourceStation = getStationById(sourceId);
-        const targetStation = getStationById(targetId);
-
-        if (sourceStation && targetStation) {
-            // Check if a track already exists
-            const existingTrack = tracks.find(
-                t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
-            );
-
-            if (existingTrack) {
-                alert(`A track already exists between ${sourceStation.name} and ${targetStation.name}`);
-                return;
-            }
-
-            const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
-            
-            const newTrack: EnhancedTrack = {
-                id: `${sourceId}-${targetId}`,
-                source: sourceId,
-                target: targetId,
-                distanceKm: parseFloat((distance / 50).toFixed(1)), // Convert pixels to km
-                speedType: 'LOCAL',
-                bidirectional: true,
-                direction: 'both',
-                condition: 'good',
-                powerType: 'electric',
-                scenicValue: 50
+    // --- Grid Pattern Loading ---
+    useEffect(() => {
+        if (adminSettings?.gridSnap?.enabled) {
+            const canvas = createGridPattern(adminSettings.gridSnap.size);
+            const img = new window.Image();
+            img.src = canvas.toDataURL();
+            img.onload = () => {
+                setGridPatternImage(img);
             };
-            addTrack(newTrack);
-            
-            // Keep stations selected so user can see the new track
-            console.log(`Created track between ${sourceStation.name} and ${targetStation.name}`);
+        } else {
+            setGridPatternImage(null);
         }
-    };
+    }, [adminSettings?.gridSnap]);
 
     // --- Keyboard Event Handling ---
     useEffect(() => {
+      const createTrackBetweenSelectedStations = () => {
+          if (selectedStationIds.length !== 2) {
+              alert('Please select exactly two stations to create a track between them.');
+              return;
+          }
+  
+          const [sourceId, targetId] = selectedStationIds;
+          const sourceStation = getStationById(sourceId);
+          const targetStation = getStationById(targetId);
+  
+          if (sourceStation && targetStation) {
+              const tracks = gameMap?.railNetwork.tracks || [];
+              // Check if a track already exists
+              const existingTrack = tracks.find(
+                  t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
+              );
+  
+              if (existingTrack) {
+                  alert(`A track already exists between ${sourceStation.name} and ${targetStation.name}`);
+                  return;
+              }
+  
+              const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
+              
+              const newTrack: EnhancedTrack = {
+                  id: `${sourceId}-${targetId}`,
+                  source: sourceId,
+                  target: targetId,
+                  distanceKm: parseFloat((distance / 50).toFixed(1)), // Convert pixels to km
+                  speedType: 'LOCAL',
+                  bidirectional: true,
+                  direction: 'both',
+                  condition: 'good',
+                  powerType: 'electric',
+                  scenicValue: 50,
+                  points: [sourceStation.coordinates, targetStation.coordinates],
+              };
+              addTrack(newTrack);
+              
+              // Keep stations selected so user can see the new track
+              console.log(`Created track between ${sourceStation.name} and ${targetStation.name}`);
+          }
+      };
+      
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 // Delete selected tracks
@@ -161,7 +176,7 @@ export const MapCanvas: React.FC = () => {
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedTrackIds, selectedStationIds, gameMap, deleteTrack, deleteStation, getStationById, createTrackBetweenSelectedStations]);
+    }, [selectedTrackIds, selectedStationIds, gameMap, deleteTrack, deleteStation, getStationById, addTrack]);
 
     // --- Event Handlers ---
 
@@ -244,30 +259,55 @@ export const MapCanvas: React.FC = () => {
                 }
             }
             if (insertIndex === -1 && currentPoints.length >= 2) {
-                insertIndex = currentPoints.length; // Append to end as fallback
+                insertIndex = currentPoints.length - 1; // Insert before the last point as a fallback
             }
             if (insertIndex !== -1) {
                 const newPoints = [...currentPoints];
-                newPoints.splice(insertIndex, 0, { x: Math.round(worldPos.x), y: Math.round(worldPos.y) });
-                console.log('Inserting at index:', insertIndex, 'New points:', newPoints);
-                updateTrack(trackId, { points: newPoints });
-            } else {
-                console.warn('Could not find insertion point');
+                newPoints.splice(insertIndex, 0, worldPos);
+                updateTrack(track.id, { points: newPoints });
             }
-            return; // Don't select if adding point
+        } else {
+            selectTrack(trackId, isCommandClick);
         }
-        selectTrack(trackId, false); // Normal selection
-    }
-    
+    };
+
+    const handlePointDragMove = (trackId: string, pointIndex: number, e: Konva.KonvaEventObject<DragEvent>) => {
+        const track = tracks.find(t => t.id === trackId);
+        if (track && track.points) {
+            const newPoints = [...track.points];
+            newPoints[pointIndex] = { x: e.target.x(), y: e.target.y() };
+            updateTrack(track.id, { points: newPoints });
+        }
+    };
+
+    const handlePointDblClick = (trackId: string, pointIndex: number) => {
+        const track = tracks.find(t => t.id === trackId);
+        if (track && track.points && track.points.length > 2) { // Can't remove start/end points
+            const newPoints = [...track.points];
+            newPoints.splice(pointIndex, 1);
+            updateTrack(track.id, { points: newPoints });
+        }
+    };
+
     const handleStationDragEnd = (e: Konva.KonvaEventObject<DragEvent>, stationId: string) => {
-        updateStation(stationId, {
-            coordinates: {
-                x: Math.round(e.target.x()),
-                y: Math.round(e.target.y()),
+        const newCoords = { x: e.target.x(), y: e.target.y() };
+        updateStation(stationId, { coordinates: newCoords });
+
+        // Update connected tracks
+        tracks.forEach(track => {
+            if (track.source === stationId || track.target === stationId) {
+                const newPoints = track.points ? [...track.points] : [];
+                if (track.source === stationId) {
+                    newPoints[0] = newCoords;
+                }
+                if (track.target === stationId) {
+                    newPoints[newPoints.length - 1] = newCoords;
+                }
+                updateTrack(track.id, { points: newPoints });
             }
         });
-    }
-
+    };
+    
     const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
         e.evt.preventDefault();
         const stage = stageRef.current;
@@ -292,8 +332,10 @@ export const MapCanvas: React.FC = () => {
         setStagePos(newPos);
     };
 
-    const getMapBounds = (stations: EnhancedStation[]) => {
-        if (stations.length === 0) return { x: 0, y: 0, width: 1000, height: 1000 };
+    const getMapBounds = (stations: EnhancedStation[]): { x: number, y: number, width: number, height: number } => {
+        if (stations.length === 0) {
+            return { x: -250, y: -250, width: 500, height: 500 };
+        }
         const coords = stations.map(s => s.coordinates);
         const xs = coords.map(c => c.x);
         const ys = coords.map(c => c.y);
@@ -324,8 +366,8 @@ export const MapCanvas: React.FC = () => {
             >
                 <Layer onClick={handleStageClick}>
                     {/* Grid */}
-                    {adminSettings?.gridSnap?.enabled && (
-                        <Rect x={-5000} y={-5000} width={10000} height={10000} fillPatternImage={createGridPattern(adminSettings.gridSnap.size) as any} />
+                    {adminSettings?.gridSnap?.enabled && gridPatternImage && (
+                        <Rect x={-5000} y={-5000} width={10000} height={10000} fillPatternImage={gridPatternImage} />
                     )}
                     {/* Render Background */}
                     {backgroundImage && gameMap?.background && (
@@ -370,22 +412,16 @@ export const MapCanvas: React.FC = () => {
                                 />
                                 {isSelected && track.points && track.points.length > 2 && track.points.slice(1, -1).map((point, index) => (
                                     <Circle
-                                        key={`${track.id}-point-${index}`}
+                                        key={`track-point-${track.id}-${index}`}
                                         x={point.x}
                                         y={point.y}
-                                        radius={5}
-                                        fill="blue"
-                                        stroke="white"
+                                        radius={adminSettings?.gridSnap?.size ? adminSettings.gridSnap.size / 4 : 4}
+                                        fill="white"
+                                        stroke="black"
                                         strokeWidth={1}
                                         draggable
-                                        onDragEnd={(e) => {
-                                            const newX = e.target.x();
-                                            const newY = e.target.y();
-                                            if (!track.points) return;
-                                            const updatedPoints = [...track.points];
-                                            updatedPoints[index + 1] = { x: newX, y: newY };
-                                            updateTrack(track.id, { points: updatedPoints });
-                                        }}
+                                        onDragMove={(e) => handlePointDragMove(track.id, index, e)}
+                                        onDblClick={() => handlePointDblClick(track.id, index)}
                                     />
                                 ))}
                             </React.Fragment>
@@ -431,10 +467,7 @@ export const MapCanvas: React.FC = () => {
             
             {newStationPos && (
                 <StationCreator
-                    position={{
-                        x: newStationPos.x * stageScale + stagePos.x,
-                        y: newStationPos.y * stageScale + stagePos.y
-                    }}
+                    position={newStationPos}
                     onClose={() => setNewStationPos(null)}
                 />
             )}
