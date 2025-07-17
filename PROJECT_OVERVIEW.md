@@ -108,7 +108,7 @@ interface RailNetwork {
 * `customBezier?` – optional `{ p1, p2, isCustom }` for curved lines
 * `visualStyle?`, `adminMetadata?` – cosmetic / audit info
 
-> **Upcoming Change:** The game runtime is migrating to a `points: Coordinates[]` array that explicitly lists intermediate control-points along a track. When that lands, extend `EnhancedTrack` accordingly and adjust `MapCanvas` line-drawing logic (probably via `Line` with multiple points or `Spline`). This doc already references that intention so future contributors are aware.
+> **Implemented Change:** The game runtime has migrated to a `points: Coordinates[]` array that explicitly lists intermediate control-points along a track. This is now supported in the editor: `EnhancedTrack` includes `points`, `MapCanvas` renders tracks as polylines using the points (falling back to straight lines), and `TrackEditor` provides UI to add/edit/remove points. Distance is recalculated based on points segments.
 
 ---
 

@@ -92,7 +92,8 @@ export interface EnhancedTrack {
   condition: TrackCondition;
   powerType: PowerType;
   scenicValue: number;
-  customBezier?: CustomBezierPoints;
+  points?: Coordinates[];
+  electrified?: boolean;
   visualStyle?: VisualStyle;
   adminMetadata?: AdminTrackMetadata;
 }

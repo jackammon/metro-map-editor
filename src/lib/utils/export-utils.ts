@@ -12,6 +12,9 @@ import { saveAs } from 'file-saver';
  * @returns A string containing the JSON file content.
  */
 const generateJsonContent = (gameMap: GameMap): string => {
+  // Note: This now includes track.points arrays and electrified flags as per game type migration.
+  // Optional: Use a replacer to exclude editor-only fields like adminSettings.
+  // const replacer = (key: string, value: any) => (key === 'adminSettings' ? undefined : value);
   return JSON.stringify(gameMap, null, 2); // Pretty-print with 2-space indentation
 };
 

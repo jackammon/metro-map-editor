@@ -5,7 +5,7 @@ import { Stage, Layer, Circle, Line as KonvaLine, Text, Image as KonvaImage, Rec
 import Konva from 'konva';
 import { useMapEditor } from '@/lib/context/map-editor-context';
 import { EnhancedStation, EnhancedTrack } from '@/lib/types/metro-types';
-import { StationCreator } from './StationCreator';
+import { StationCreator } from './StationCreator.tsx';
 
 // Utility to calculate distance
 const calculateDistance = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
@@ -23,6 +23,7 @@ export const MapCanvas: React.FC = () => {
         selectedTrackIds, selectTrack,
         getStationById, clearSelection,
         updateGameSettings, deleteStation, deleteTrack,
+        updateTrack, // Add this
     } = useMapEditor();
     
     const [newStationPos, setNewStationPos] = useState<{ x: number; y: number } | null>(null);
@@ -189,7 +190,61 @@ export const MapCanvas: React.FC = () => {
 
     const handleTrackClick = (e: Konva.KonvaEventObject<MouseEvent>, trackId: string) => {
         e.cancelBubble = true;
-        selectTrack(trackId, false); // Tracks don't support multiselect for now
+        const isCommandClick = e.evt.metaKey || e.evt.ctrlKey;
+        console.log('Track clicked:', trackId, 'Command:', isCommandClick, 'Selected:', selectedTrackIds.includes(trackId));
+        const track = tracks.find(t => t.id === trackId);
+        if (isCommandClick && selectedTrackIds.includes(trackId) && track) {
+            const stage = e.target.getStage();
+            if (!stage) return;
+            const pos = stage.getPointerPosition();
+            if (!pos) return;
+            const worldPos = {
+                x: (pos.x - stage.x()) / stage.scaleX(),
+                y: (pos.y - stage.y()) / stage.scaleY(),
+            };
+            console.log('Adding point at:', worldPos);
+
+            let currentPoints = track.points || [];
+            if (currentPoints.length < 2) {
+                const source = getStationById(track.source);
+                const target = getStationById(track.target);
+                if (source && target) {
+                    currentPoints = [source.coordinates, target.coordinates];
+                }
+            }
+
+            // Find closest segment and insert point
+            let minDist = Infinity;
+            let insertIndex = -1;
+            for (let i = 0; i < currentPoints.length - 1; i++) {
+                const p1 = currentPoints[i];
+                const p2 = currentPoints[i + 1];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const t = Math.max(0, Math.min(1, ((worldPos.x - p1.x) * dx + (worldPos.y - p1.y) * dy) / (dx * dx + dy * dy)));
+                const projX = p1.x + t * dx;
+                const projY = p1.y + t * dy;
+                const dist = Math.sqrt(Math.pow(worldPos.x - projX, 2) + Math.pow(worldPos.y - projY, 2));
+                console.log(`Segment ${i}: dist=${dist}`);
+                if (dist < minDist) {
+                    minDist = dist;
+                    insertIndex = i + 1;
+                }
+            }
+            if (insertIndex === -1 && currentPoints.length >= 2) {
+                insertIndex = currentPoints.length; // Append to end as fallback
+            }
+            if (insertIndex !== -1) {
+                const newPoints = [...currentPoints];
+                newPoints.splice(insertIndex, 0, { x: Math.round(worldPos.x), y: Math.round(worldPos.y) });
+                console.log('Inserting at index:', insertIndex, 'New points:', newPoints);
+                updateTrack(trackId, { points: newPoints });
+            } else {
+                console.warn('Could not find insertion point');
+            }
+            return; // Don't select if adding point
+        }
+        selectTrack(trackId, false); // Normal selection
     }
     
     const handleStationDragEnd = (e: Konva.KonvaEventObject<DragEvent>, stationId: string) => {
@@ -280,18 +335,47 @@ export const MapCanvas: React.FC = () => {
 
                         const isSelected = selectedTrackIds.includes(track.id);
 
+                        // Use points if available, else fallback to straight line
+                        let linePoints: number[] = [];
+                        if (track.points && track.points.length > 0) {
+                            linePoints = track.points.flatMap(p => [p.x, p.y]);
+                        } else {
+                            linePoints = [
+                                source.coordinates.x, source.coordinates.y,
+                                target.coordinates.x, target.coordinates.y,
+                            ];
+                        }
+                        console.log(`Rendering track ${track.id} with points:`, linePoints);
+
                         return (
-                            <KonvaLine
-                                key={track.id}
-                                points={[
-                                    source.coordinates.x, source.coordinates.y,
-                                    target.coordinates.x, target.coordinates.y,
-                                ]}
-                                stroke={isSelected ? '#ff00ff' : '#000000'}
-                                strokeWidth={isSelected ? 6 : 4}
-                                hitStrokeWidth={12} // makes it easier to click
-                                onClick={(e) => handleTrackClick(e, track.id)}
-                            />
+                            <React.Fragment key={track.id}>
+                                <KonvaLine
+                                    points={linePoints}
+                                    stroke={isSelected ? '#ff00ff' : '#000000'}
+                                    strokeWidth={isSelected ? 6 : 4}
+                                    hitStrokeWidth={20} // makes it easier to click
+                                    onClick={(e) => handleTrackClick(e, track.id)}
+                                />
+                                {isSelected && track.points && track.points.length > 2 && track.points.slice(1, -1).map((point, index) => (
+                                    <Circle
+                                        key={`${track.id}-point-${index}`}
+                                        x={point.x}
+                                        y={point.y}
+                                        radius={5}
+                                        fill="blue"
+                                        stroke="white"
+                                        strokeWidth={1}
+                                        draggable
+                                        onDragEnd={(e) => {
+                                            const newX = e.target.x();
+                                            const newY = e.target.y();
+                                            const updatedPoints = [...track.points];
+                                            updatedPoints[index + 1] = { x: newX, y: newY };
+                                            updateTrack(track.id, { points: updatedPoints });
+                                        }}
+                                    />
+                                ))}
+                            </React.Fragment>
                         );
                     })}
 

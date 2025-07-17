@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMapEditor } from '@/lib/context/map-editor-context';
@@ -25,6 +25,8 @@ const trackSchema = z.object({
   condition: z.nativeEnum(TrackCondition),
   powerType: z.nativeEnum(PowerType),
   scenicValue: z.number().min(0).max(100),
+  points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+  electrified: z.boolean().optional(),
 }).refine((data) => data.source !== data.target, {
   message: "Source and target stations must be different",
   path: ["target"],
@@ -55,14 +57,42 @@ export const TrackEditor: React.FC = () => {
         condition: track.condition,
         powerType: track.powerType,
         scenicValue: track.scenicValue,
+        points: track.points || [],
+        electrified: track.electrified || false,
       });
     }
   }, [track, form]);
 
+  const { fields, remove } = useFieldArray({
+    control: form.control,
+    name: 'points',
+  });
+
   const onSubmit = (data: TrackFormValues) => {
     if (!track || !gameMap) return;
     
-    // Check if source/target changed and if a track with the new combination already exists
+    const sourceStation = gameMap.railNetwork.stations.find(s => s.id === data.source);
+    const targetStation = gameMap.railNetwork.stations.find(s => s.id === data.target);
+    if (!sourceStation || !targetStation) return;
+
+    let finalPoints = data.points || [];
+    if (finalPoints.length === 0) {
+      finalPoints = [sourceStation.coordinates, targetStation.coordinates];
+    } else {
+      // Ensure endpoints match stations
+      finalPoints[0] = sourceStation.coordinates;
+      finalPoints[finalPoints.length - 1] = targetStation.coordinates;
+    }
+
+    // Recalculate distance based on points
+    let newDistance = 0;
+    for (let i = 0; i < finalPoints.length - 1; i++) {
+      const p1 = finalPoints[i];
+      const p2 = finalPoints[i + 1];
+      newDistance += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) / 50;
+    }
+    newDistance = parseFloat(newDistance.toFixed(1));
+
     const sourceChanged = data.source !== track.source;
     const targetChanged = data.target !== track.target;
     
@@ -81,30 +111,19 @@ export const TrackEditor: React.FC = () => {
       
       // When source/target changes, delete the old track and create a new one
       // Calculate new distance based on station coordinates
-      const sourceStation = gameMap.railNetwork.stations.find(s => s.id === data.source);
-      const targetStation = gameMap.railNetwork.stations.find(s => s.id === data.target);
-      let newDistance = data.distanceKm;
-      
-      if (sourceStation && targetStation) {
-        const calculatedDistance = Math.sqrt(
-          Math.pow(targetStation.coordinates.x - sourceStation.coordinates.x, 2) +
-          Math.pow(targetStation.coordinates.y - sourceStation.coordinates.y, 2)
-        ) / 50; // Convert pixels to km (assuming 50px = 1km)
-        newDistance = parseFloat(calculatedDistance.toFixed(1));
-      }
-      
       const newTrack: EnhancedTrack = {
         ...track,
         ...data,
         id: `${data.source}-${data.target}`,
         distanceKm: newDistance,
+        points: finalPoints,
       };
       
       deleteTrack(track.id);
       addTrack(newTrack);
     } else {
       // If only other properties changed, just update the track
-      updateTrack(track.id, data);
+      updateTrack(track.id, { ...data, points: finalPoints, distanceKm: newDistance });
     }
   };
 
@@ -207,6 +226,35 @@ export const TrackEditor: React.FC = () => {
           <Controller name="scenicValue" control={form.control} render={({ field }) => (
             <div><Label>Scenic Value: {field.value}</Label><Slider min={0} max={100} step={1} defaultValue={[field.value]} onValueChange={(value) => field.onChange(value[0])}/></div>
           )}/>
+
+          <Controller name="electrified" control={form.control} render={({ field }) => (
+            <div className="flex items-center space-x-2"><Checkbox checked={field.value} onCheckedChange={field.onChange} /><Label>Electrified</Label></div>
+          )}/>
+
+          <div>
+            <Label>Intermediate Track Points</Label>
+            {fields.slice(1, fields.length - 1).map((field, index) => (
+              <div key={field.id} className="flex space-x-2 mb-2 items-center">
+                <span>Point {index + 1}: ({field.x.toFixed(1)}, {field.y.toFixed(1)})</span>
+                <Button type="button" variant="outline" onClick={() => {
+                  const actualIndex = index + 1; // Since slicing
+                  remove(actualIndex);
+                  // Recalculate distance and update immediately
+                  const currentValues = form.getValues();
+                  let newDistance = 0;
+                  const updatedPoints = currentValues.points || [];
+                  for (let i = 0; i < updatedPoints.length - 1; i++) {
+                    const p1 = updatedPoints[i];
+                    const p2 = updatedPoints[i + 1];
+                    newDistance += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) / 50;
+                  }
+                  newDistance = parseFloat(newDistance.toFixed(1));
+                  updateTrack(track.id, { points: updatedPoints, distanceKm: newDistance });
+                }}>Delete</Button>
+              </div>
+            ))}
+            <p className="text-sm text-muted-foreground">Add points by Command/Ctrl-clicking on the track in the canvas.</p>
+          </div>
 
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">Save Changes</Button>

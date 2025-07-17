@@ -44,6 +44,7 @@ export const validateMap = (gameMap: GameMap): ValidationError[] => {
 
   // --- Track Validations ---
   const trackIds = new Set<string>();
+  const stationMap = new Map(stations.map(s => [s.id, s]));
   tracks.forEach(track => {
     // Check for duplicate track IDs
     if (trackIds.has(track.id)) {
@@ -82,6 +83,50 @@ export const validateMap = (gameMap: GameMap): ValidationError[] => {
             category: 'track',
             relatedId: track.id
         })
+    }
+
+    // Validate points if present
+    if (track.points && track.points.length > 0) {
+      if (track.points.length < 2) {
+        errors.push({
+          severity: 'error',
+          message: `Track "${track.id}" has points array with fewer than 2 points.`,
+          category: 'track',
+          relatedId: track.id,
+        });
+      }
+      const sourceStation = stationMap.get(track.source);
+      const targetStation = stationMap.get(track.target);
+      if (sourceStation && targetStation) {
+        const firstPoint = track.points[0];
+        const lastPoint = track.points[track.points.length - 1];
+        if (firstPoint.x !== sourceStation.coordinates.x || firstPoint.y !== sourceStation.coordinates.y) {
+          errors.push({
+            severity: 'warning',
+            message: `Track "${track.id}" first point does not match source station coordinates.`,
+            category: 'track',
+            relatedId: track.id,
+          });
+        }
+        if (lastPoint.x !== targetStation.coordinates.x || lastPoint.y !== targetStation.coordinates.y) {
+          errors.push({
+            severity: 'warning',
+            message: `Track "${track.id}" last point does not match target station coordinates.`,
+            category: 'track',
+            relatedId: track.id,
+          });
+        }
+      }
+      track.points.forEach((p, index) => {
+        if (typeof p.x !== 'number' || isNaN(p.x) || typeof p.y !== 'number' || isNaN(p.y)) {
+          errors.push({
+            severity: 'error',
+            message: `Track "${track.id}" has invalid point at index ${index} (non-number or NaN).`,
+            category: 'track',
+            relatedId: track.id,
+          });
+        }
+      });
     }
   });
   

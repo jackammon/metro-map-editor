@@ -181,11 +181,20 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
             console.warn(`Track with ID "${track.id}" already exists.`);
             return prevMap;
         }
+        const sourceStation = prevMap.railNetwork.stations.find(s => s.id === track.source);
+        const targetStation = prevMap.railNetwork.stations.find(s => s.id === track.target);
+        let finalTrack = track;
+        if (sourceStation && targetStation && (!track.points || track.points.length === 0)) {
+          finalTrack = {
+            ...track,
+            points: [sourceStation.coordinates, targetStation.coordinates],
+          };
+        }
         return {
             ...prevMap,
             railNetwork: {
                 ...prevMap.railNetwork,
-                tracks: [...prevMap.railNetwork.tracks, track]
+                tracks: [...prevMap.railNetwork.tracks, finalTrack]
             }
         }
     })
