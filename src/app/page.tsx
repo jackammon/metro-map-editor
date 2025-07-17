@@ -8,6 +8,7 @@ import { EditorSettingsPanel } from '@/components/metro-editor/EditorSettingsPan
 import { BackgroundEditor } from '@/components/metro-editor/BackgroundEditor';
 import { ValidationPanel } from '@/components/metro-editor/ValidationPanel';
 import { ExportPanel } from '@/components/metro-editor/ExportPanel';
+import { ImportPanel } from '@/components/metro-editor/ImportPanel';
 import { StationsList } from '@/components/metro-editor/StationsList';
 import { StationEditor } from '@/components/metro-editor/StationEditor';
 import { TrackEditor } from '@/components/metro-editor/TrackEditor';
@@ -32,6 +33,7 @@ export default function Home() {
             <EditorSettingsPanel />
             <BackgroundEditor />
             <ValidationPanel />
+            <ImportPanel />
             <ExportPanel />
           </div>
 

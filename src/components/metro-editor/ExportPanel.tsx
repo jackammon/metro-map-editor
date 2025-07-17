@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { exportMapToTypeScript } from '@/lib/utils/export-utils';
+import { exportMapToJson } from '@/lib/utils/export-utils';
 import { validateMap } from '@/lib/utils/validation-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ export const ExportPanel: React.FC = () => {
 
   const handleExport = () => {
     if (gameMap) {
-      exportMapToTypeScript(gameMap);
+      exportMapToJson(gameMap);
     }
   };
   
@@ -27,7 +27,7 @@ export const ExportPanel: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <Button onClick={handleExport} className="w-full" disabled={!gameMap || hasErrors}>
-          Export to TypeScript
+          Export to JSON
         </Button>
         {hasErrors && (
             <div className="flex items-center space-x-2 text-red-600 text-sm">

@@ -43,6 +43,7 @@ A standalone, data-driven tool for designing and exporting complex rail networks
 
 - Use the **Map Loader** panel to either select an existing map from the dropdown or click **Create New Map** to start from a blank canvas.
 - Your progress is automatically saved to your browser's local storage.
+- You can also import a map from a local `.ts` file using the **Import Map** panel.
 
 ### 2. Edit Map Metadata
 
@@ -70,7 +71,7 @@ A standalone, data-driven tool for designing and exporting complex rail networks
 
 ### 6. Export Your Map
 
-- Once you're finished, click **Export to TypeScript** in the **Export Map** panel. This will download a `.ts` file containing your map data, ready to be imported into your game.
+- Once you're finished, click **Export to JSON** in the **Export Map** panel. This will download a `.json` file containing your map data, ready to be imported into your game.
 
 ## Keyboard Shortcuts
 
