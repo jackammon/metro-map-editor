@@ -8,6 +8,11 @@ import { EnhancedStation, EnhancedTrack, Coordinates } from '@/lib/types/metro-t
 import { Button } from '@/components/ui/button';
 import { StationCreator } from './StationCreator';
 
+interface NewStationPosition {
+    screenPos: Coordinates;
+    worldPos: Coordinates;
+}
+
 // Utility to calculate distance
 const calculateDistance = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
     return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
@@ -26,7 +31,7 @@ export const MapCanvas: React.FC = () => {
         updateTrack, 
     } = useMapEditor();
     
-    const [newStationPos, setNewStationPos] = useState<Coordinates | null>(null);
+    const [newStationPos, setNewStationPos] = useState<NewStationPosition | null>(null);
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const [stageScale, setStageScale] = useState(1);
     
@@ -113,21 +118,11 @@ export const MapCanvas: React.FC = () => {
           const targetStation = getStationById(targetId);
   
           if (sourceStation && targetStation) {
-              const tracks = gameMap?.railNetwork.tracks || [];
-              // Check if a track already exists
-              const existingTrack = tracks.find(
-                  t => (t.source === sourceId && t.target === targetId) || (t.source === targetId && t.target === sourceId)
-              );
-  
-              if (existingTrack) {
-                  alert(`A track already exists between ${sourceStation.name} and ${targetStation.name}`);
-                  return;
-              }
-  
               const distance = calculateDistance(sourceStation.coordinates, targetStation.coordinates);
               
+              // Use timestamp to ensure unique ID for multiple tracks between same stations
               const newTrack: EnhancedTrack = {
-                  id: `${sourceId}-${targetId}`,
+                  id: `${sourceId}-${targetId}-${Date.now()}`,
                   source: sourceId,
                   target: targetId,
                   distanceKm: parseFloat((distance / 50).toFixed(1)), // Convert pixels to km
@@ -196,13 +191,18 @@ export const MapCanvas: React.FC = () => {
             console.log('Stage scale:', stage.scaleX(), stage.scaleY());
             
             if(pos) {
-                // Convert screen coordinates to world coordinates
+                // Convert screen coordinates to world coordinates for station placement
                 const worldPos = {
                     x: Math.round((pos.x - stage.x()) / stage.scaleX()),
                     y: Math.round((pos.y - stage.y()) / stage.scaleY())
                 };
-                console.log('Calculated world position:', worldPos);
-                setNewStationPos(worldPos);
+                
+                // Use screen coordinates for modal positioning, world coordinates for station creation
+                setNewStationPos({
+                    screenPos: { x: pos.x, y: pos.y },
+                    worldPos: worldPos
+                });
+                console.log('Screen position:', pos, 'World position:', worldPos);
             }
         }
         
@@ -275,7 +275,8 @@ export const MapCanvas: React.FC = () => {
         const track = tracks.find(t => t.id === trackId);
         if (track && track.points) {
             const newPoints = [...track.points];
-            newPoints[pointIndex] = { x: e.target.x(), y: e.target.y() };
+            // pointIndex is from the sliced array, so we need to add 1 to get the actual index in the full points array
+            newPoints[pointIndex + 1] = { x: e.target.x(), y: e.target.y() };
             updateTrack(track.id, { points: newPoints });
         }
     };
@@ -284,7 +285,8 @@ export const MapCanvas: React.FC = () => {
         const track = tracks.find(t => t.id === trackId);
         if (track && track.points && track.points.length > 2) { // Can't remove start/end points
             const newPoints = [...track.points];
-            newPoints.splice(pointIndex, 1);
+            // pointIndex is from the sliced array, so we need to add 1 to get the actual index in the full points array
+            newPoints.splice(pointIndex + 1, 1);
             updateTrack(track.id, { points: newPoints });
         }
     };
