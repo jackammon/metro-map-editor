@@ -10,6 +10,7 @@ import { ValidationPanel } from '@/components/metro-editor/ValidationPanel';
 import { ExportPanel } from '@/components/metro-editor/ExportPanel';
 import { ImportPanel } from '@/components/metro-editor/ImportPanel';
 import { StationsList } from '@/components/metro-editor/StationsList';
+import { TracksList } from '@/components/metro-editor/TracksList';
 import { StationEditor } from '@/components/metro-editor/StationEditor';
 import { TrackEditor } from '@/components/metro-editor/TrackEditor';
 import { KonvaCanvas } from '@/components/metro-editor/KonvaCanvas';
@@ -45,6 +46,7 @@ export default function Home() {
           {/* Right sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <StationsList />
+            <TracksList />
             <StationEditor />
             <TrackEditor />
           </div>
