@@ -2,7 +2,6 @@
 
 import React, { useRef } from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { GameMap } from '@/lib/types/metro-types';
@@ -46,23 +45,20 @@ export const ImportPanel: React.FC = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Import Map</CardTitle>
-        <CardDescription>Load a .json map file from your computer.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button onClick={handleButtonClick} className="w-full">
-          Import from JSON File
-        </Button>
-        <Input 
-          type="file" 
-          accept=".json" 
-          onChange={handleFileChange} 
-          ref={fileInputRef}
-          className="hidden"
-        />
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-3">
+        <p className="text-sm text-muted-foreground">Load a .json map file from your computer.</p>
+      </div>
+      <Button onClick={handleButtonClick} className="w-full">
+        Import from JSON File
+      </Button>
+      <Input 
+        type="file" 
+        accept=".json" 
+        onChange={handleFileChange} 
+        ref={fileInputRef}
+        className="hidden"
+      />
+    </div>
   );
 }; 

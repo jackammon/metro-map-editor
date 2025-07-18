@@ -125,26 +125,19 @@ export const TrackEditor: React.FC = () => {
 
   if (!isVisible || !track) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Track Editor</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground">Select a single track on the map to edit its properties.</p>
-            </CardContent>
-        </Card>
+      <div>
+        <p className="text-muted-foreground">Select a single track on the map to edit its properties.</p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-            <CardTitle>Edit Track</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => clearSelection()}>Close</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold">Edit Track</h3>
+          <Button variant="ghost" size="sm" onClick={() => clearSelection()}>Close</Button>
+      </div>
+      <div>
         <form className="space-y-4">
           <div>
             <Label htmlFor="track-id">ID</Label>
@@ -250,7 +243,7 @@ export const TrackEditor: React.FC = () => {
             <Button type="button" variant="destructive" onClick={handleDelete}>Delete Track</Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }; 

@@ -28,7 +28,8 @@ export const MapCanvas: React.FC = () => {
         selectedTrackIds, selectTrack,
         getStationById, clearSelection,
         deleteStation, deleteTrack,
-        updateTrack, 
+        updateTrack,
+        registerResetCamera
     } = useMapEditor();
     
     const [newStationPos, setNewStationPos] = useState<NewStationPosition | null>(null);
@@ -74,7 +75,9 @@ export const MapCanvas: React.FC = () => {
     // --- Camera & Initialization ---
     useEffect(() => {
         resetCamera();
-    }, [gameMap?.id, gameMap, resetCamera]);
+        // Register the resetCamera function with the context
+        registerResetCamera(resetCamera);
+    }, [gameMap?.id, gameMap, resetCamera, registerResetCamera]);
 
 
     // --- Background Image Loading ---
@@ -463,9 +466,7 @@ export const MapCanvas: React.FC = () => {
 
                 </Layer>
             </Stage>
-            <div className="absolute top-2 right-2 rounded">
-                <Button onClick={resetCamera} variant="outline" size="sm">Reset Camera</Button>
-            </div>
+
             
             {newStationPos && (
                 <StationCreator

@@ -73,6 +73,10 @@ interface MapEditorContextType {
   // Utility
   getStationById: (id: string) => EnhancedStation | undefined;
   getTrackById: (id: string) => EnhancedTrack | undefined;
+  
+  // Camera
+  resetCamera: () => void;
+  registerResetCamera: (callback: () => void) => void;
 }
 
 const MapEditorContext = createContext<MapEditorContextType | undefined>(undefined);
@@ -85,6 +89,7 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [selectedStationIds, setSelectedStationIds] = useState<string[]>([]);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [resetCameraCallback, setResetCameraCallback] = useState<(() => void) | null>(null);
 
   // --- DATA PERSISTENCE ---
 
@@ -327,6 +332,18 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
         return gameMap?.railNetwork.tracks.find(t => t.id === id);
     };
 
+    // --- CAMERA FUNCTIONS ---
+    
+    const resetCamera = () => {
+        if (resetCameraCallback) {
+            resetCameraCallback();
+        }
+    };
+
+    const registerResetCamera = (callback: () => void) => {
+        setResetCameraCallback(() => callback);
+    };
+
 
   // --- PROVIDER VALUE ---
 
@@ -350,7 +367,9 @@ export const MapEditorProvider: React.FC<{ children: ReactNode }> = ({ children 
     selectTrack,
     clearSelection,
     getStationById,
-    getTrackById
+    getTrackById,
+    resetCamera,
+    registerResetCamera
   };
 
   return (

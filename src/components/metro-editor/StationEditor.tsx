@@ -148,26 +148,19 @@ export const StationEditor: React.FC = () => {
 
   if (!isVisible || !station) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Station Editor</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground">Select a single station to edit its properties.</p>
-            </CardContent>
-        </Card>
+      <div>
+        <p className="text-muted-foreground">Select a single station to edit its properties.</p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-            <CardTitle>Edit Station</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => clearSelection()}>Close</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div>
+      <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold">Edit Station</h3>
+          <Button variant="ghost" size="sm" onClick={() => clearSelection()}>Close</Button>
+      </div>
+      <div>
         <form className="space-y-4">
           <div>
             <Label htmlFor="station-id">ID</Label>
@@ -339,7 +332,7 @@ export const StationEditor: React.FC = () => {
 
           <span className="block text-center text-green-600">Changes auto-saved</span>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }; 

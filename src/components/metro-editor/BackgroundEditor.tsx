@@ -2,7 +2,6 @@
 
 import React, { useRef } from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -53,37 +52,34 @@ export const BackgroundEditor: React.FC = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Background Image</CardTitle>
-        <CardDescription>Upload an image to use as a guide.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">Upload an image to use as a guide.</p>
         <Input type="file" accept="image/*" onChange={handleImageUpload} ref={fileInputRef} />
+      </div>
 
-        {background?.imageUrl && (
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Image loaded.</p>
-                <Button variant="destructive" size="sm" onClick={handleClearImage}>Clear</Button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="bg-scale">Scale</Label>
-                    <Input id="bg-scale" type="number" step="0.1" value={background.scale || 1} onChange={e => handleSettingChange('scale', e.target.value)} />
-                </div>
-                <div>
-                    <Label>Offset</Label>
-                    <div className="flex gap-2">
-                        <Input type="number" placeholder="X" value={background.offset?.x || 0} onChange={e => handleSettingChange('offsetX', e.target.value)} />
-                        <Input type="number" placeholder="Y" value={background.offset?.y || 0} onChange={e => handleSettingChange('offsetY', e.target.value)} />
-                    </div>
-                </div>
-            </div>
+      {background?.imageUrl && (
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Image loaded.</p>
+              <Button variant="destructive" size="sm" onClick={handleClearImage}>Clear</Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          <div className="grid grid-cols-2 gap-4">
+              <div>
+                  <Label htmlFor="bg-scale">Scale</Label>
+                  <Input id="bg-scale" type="number" step="0.1" value={background.scale || 1} onChange={e => handleSettingChange('scale', e.target.value)} />
+              </div>
+              <div>
+                  <Label>Offset</Label>
+                  <div className="flex gap-2">
+                      <Input type="number" placeholder="X" value={background.offset?.x || 0} onChange={e => handleSettingChange('offsetX', e.target.value)} />
+                      <Input type="number" placeholder="Y" value={background.offset?.y || 0} onChange={e => handleSettingChange('offsetY', e.target.value)} />
+                  </div>
+              </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }; 

@@ -3,7 +3,6 @@
 import React, { useMemo } from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
 import { validateMap, ValidationError } from '@/lib/utils/validation-utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
@@ -24,40 +23,38 @@ export const ValidationPanel: React.FC = () => {
   }, [gameMap]);
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-            <span>Validation Status</span>
-            {validationErrors.length === 0 ? 
-                <CheckCircle className="h-5 w-5 text-green-500" /> :
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-            }
-        </CardTitle>
-        <CardDescription>
-            {validationErrors.length} issue(s) found.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {validationErrors.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No issues detected. Map is valid!</p>
-        ) : (
-          <ul className="space-y-2 max-h-48 overflow-y-auto">
-            {validationErrors.map((error, index) => (
-              <li key={index} className="flex items-start space-x-2 text-sm p-2 rounded-md bg-muted/50">
-                <SeverityIcon severity={error.severity} />
-                <div>
-                    <p>{error.message}</p>
-                    {error.relatedId && (
-                        <Badge variant="secondary" className="mt-1">
-                            ID: {error.relatedId}
-                        </Badge>
-                    )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <div>
+      <div className="flex items-center space-x-2 mb-3">
+          <span className="font-semibold">Status</span>
+          {validationErrors.length === 0 ? 
+              <CheckCircle className="h-5 w-5 text-green-500" /> :
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+          }
+      </div>
+      <div className="mb-3">
+          <p className="text-sm text-muted-foreground">
+              {validationErrors.length} issue(s) found.
+          </p>
+      </div>
+      {validationErrors.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No issues detected. Map is valid!</p>
+      ) : (
+        <ul className="space-y-2 max-h-48 overflow-y-auto">
+          {validationErrors.map((error, index) => (
+            <li key={index} className="flex items-start space-x-2 text-sm p-2 rounded-md bg-muted/50">
+              <SeverityIcon severity={error.severity} />
+              <div>
+                  <p>{error.message}</p>
+                  {error.relatedId && (
+                      <Badge variant="secondary" className="mt-1">
+                          ID: {error.relatedId}
+                      </Badge>
+                  )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }; 
