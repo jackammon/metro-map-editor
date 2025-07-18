@@ -11,6 +11,18 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // Disable alt-text rule for lucide icon components  
+      "jsx-a11y/alt-text": ["error", {
+        "elements": ["img", "object", "area", "input[type='image']"],
+        "img": ["Image"],
+        "object": ["Object"],
+        "area": ["Area"],
+        "input[type='image']": ["InputImage"]
+      }]
+    }
+  }
 ];
 
 export default eslintConfig;

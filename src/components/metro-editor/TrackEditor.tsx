@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMapEditor } from '@/lib/context/map-editor-context';
 import { TrainSpeedType, TrackDirection, TrackCondition, PowerType } from '@/lib/types/metro-types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';

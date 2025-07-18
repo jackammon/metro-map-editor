@@ -26,7 +26,7 @@ export const RightSidePanel: React.FC<RightSidePanelProps> = ({
 }) => {
   const [position, setPosition] = useState({ x: 20, y: 80 }); // Default position
 
-  React.useEffect(() => {
+  React.  useEffect(() => {
     if (typeof window !== 'undefined') {
       // Set initial position from right side
       const defaultX = defaultPosition?.x ?? -360;
@@ -36,7 +36,7 @@ export const RightSidePanel: React.FC<RightSidePanelProps> = ({
         y: defaultPosition?.y ?? 80 
       });
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [defaultPosition?.x, defaultPosition?.y]); // Include dependencies used in the effect
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });

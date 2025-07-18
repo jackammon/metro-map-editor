@@ -38,7 +38,7 @@ export const TracksList: React.FC = () => {
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
         {tracks.length === 0 ? (
           <div className="text-center text-muted-foreground py-4">
-            No tracks yet. Select two stations and press 'L' to create one.
+            No tracks yet. Select two stations and press &apos;L&apos; to create one.
           </div>
         ) : (
           tracks.map(track => (

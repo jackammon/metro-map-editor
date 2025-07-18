@@ -4,8 +4,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Stage, Layer, Circle, Line as KonvaLine, Text, Image as KonvaImage, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedStation, EnhancedTrack, Coordinates } from '@/lib/types/metro-types';
-import { Button } from '@/components/ui/button';
+import { EnhancedStation, EnhancedTrack, Coordinates, GameMap } from '@/lib/types/metro-types';
 import { StationCreator } from './StationCreator';
 
 interface NewStationPosition {
@@ -38,17 +37,25 @@ export const MapCanvas: React.FC = () => {
     
     const stageRef = useRef<Konva.Stage>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const gameMapRef = useRef<GameMap | null>(null);
     const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
     const [gridPatternImage, setGridPatternImage] = useState<HTMLImageElement | null>(null);
+
+    // Keep gameMapRef in sync with gameMap
+    useEffect(() => {
+        gameMapRef.current = gameMap;
+    }, [gameMap]);
 
     const stations = useMemo(() => gameMap?.railNetwork.stations || [], [gameMap]);
     const tracks = useMemo(() => gameMap?.railNetwork.tracks || [], [gameMap]);
     const adminSettings = useMemo(() => gameMap?.adminSettings, [gameMap]);
 
     const resetCamera = useCallback(() => {
-        if (gameMap && containerRef.current && stageRef.current) {
+        console.log('resetCamera called'); // Debug log
+        const currentGameMap = gameMapRef.current;
+        if (currentGameMap && containerRef.current && stageRef.current) {
             const stage = stageRef.current;
-            const mapBounds = getMapBounds(gameMap.railNetwork.stations);
+            const mapBounds = getMapBounds(currentGameMap.railNetwork.stations);
             const container = containerRef.current.getBoundingClientRect();
             
             const zoom = Math.min(
@@ -70,14 +77,20 @@ export const MapCanvas: React.FC = () => {
             setStageScale(zoom);
             setStagePos(newPos);
         }
-    }, [gameMap]);
+    }, []); // No dependencies - access current values via refs
 
     // --- Camera & Initialization ---
     useEffect(() => {
-        resetCamera();
-        // Register the resetCamera function with the context
+        // Only reset camera when map ID changes (switching maps)
+        if (gameMap?.id) {
+            resetCamera();
+        }
+    }, [gameMap?.id, resetCamera]);
+
+    // Register the reset camera function separately
+    useEffect(() => {
         registerResetCamera(resetCamera);
-    }, [gameMap?.id, gameMap, resetCamera, registerResetCamera]);
+    }, [resetCamera, registerResetCamera]);
 
 
     // --- Background Image Loading ---

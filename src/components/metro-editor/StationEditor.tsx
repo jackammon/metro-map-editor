@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMapEditor } from '@/lib/context/map-editor-context';
 import { StationType, TrainSpeedType } from '@/lib/types/metro-types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -31,22 +30,22 @@ export const StationEditor: React.FC = () => {
   const station = isVisible ? getStationById(selectedStationIds[0]) : null;
 
   // Get tracks connected to this station
-  const getConnectedTracks = (stationId: string) => {
+  const getConnectedTracks = useCallback((stationId: string) => {
     if (!gameMap) return [];
     return gameMap.railNetwork.tracks.filter(track => 
       track.source === stationId || track.target === stationId
     );
-  };
+  }, [gameMap]);
 
   // Get service types from connected tracks
-  const getAutoDetectedServices = (stationId: string): TrainSpeedType[] => {
+  const getAutoDetectedServices = useCallback((stationId: string): TrainSpeedType[] => {
     const connectedTracks = getConnectedTracks(stationId);
     const serviceTypes = new Set(connectedTracks.map(track => track.speedType));
     return Array.from(serviceTypes);
-  };
+  }, [getConnectedTracks]);
 
   // Calculate platform count based on directional services for timetable gameplay
-  const getRequiredPlatformCount = (stationId: string): number => {
+  const getRequiredPlatformCount = useCallback((stationId: string): number => {
     const connectedTracks = getConnectedTracks(stationId);
     if (connectedTracks.length === 0) return 1;
     
@@ -65,14 +64,14 @@ export const StationEditor: React.FC = () => {
     });
     
     return Math.max(1, totalPlatforms); // Minimum 1 platform
-  };
+  }, [getConnectedTracks]);
 
   // Calculate station type based on platform count for gameplay scaling
-  const getRequiredStationType = (platformCount: number): StationType => {
+  const getRequiredStationType = useCallback((platformCount: number): StationType => {
     if (platformCount <= 2) return StationType.SMALL;    // Simple stops
     if (platformCount < 8) return StationType.MEDIUM;    // Interchanges
     return StationType.LARGE;                            // Major hubs
-  };
+  }, []);
 
   const connectedTracks = station ? getConnectedTracks(station.id) : [];
   const autoDetectedServices = station ? getAutoDetectedServices(station.id) : [];
@@ -126,7 +125,7 @@ export const StationEditor: React.FC = () => {
         form.setValue('type', currentRequiredType);
       }
     }
-  }, [gameMap?.railNetwork.tracks, station, form, getAutoDetectedServices, getRequiredPlatformCount, getRequiredStationType]);
+  }, [gameMap, gameMap?.railNetwork.tracks, station, form, getAutoDetectedServices, getRequiredPlatformCount, getRequiredStationType]);
 
   const formValues = form.watch();
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
