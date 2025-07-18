@@ -2,10 +2,13 @@
 
 import React, { useState } from 'react';
 import { useMapEditor } from '@/lib/context/map-editor-context';
-import { EnhancedStation } from '@/lib/types/metro-types';
+import { EnhancedStation, Coordinates } from '@/lib/types/metro-types';
 
 interface StationCreatorProps {
-  position: { x: number; y: number };
+  position: {
+    screenPos: Coordinates;
+    worldPos: Coordinates;
+  };
   onClose: () => void;
 }
 
@@ -24,7 +27,7 @@ export const StationCreator: React.FC<StationCreatorProps> = ({ position, onClos
     const newStation: EnhancedStation = {
       id,
       name,
-      coordinates: position,
+      coordinates: position.worldPos,
       type: 'small',
       importance: 50,
       platforms: 1,
@@ -38,11 +41,21 @@ export const StationCreator: React.FC<StationCreatorProps> = ({ position, onClos
   return (
     <div
       className="absolute bg-white p-4 rounded-lg shadow-xl border"
-      style={{ left: position.x, top: position.y }}
+      style={{ left: position.screenPos.x, top: position.screenPos.y }}
       onClick={e => e.stopPropagation()} // Prevent closing when clicking inside
     >
       <form onSubmit={handleSubmit} className="space-y-3">
-        <h4 className="font-bold">New Station</h4>
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="font-bold">New Station</h4>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-lg font-bold leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
         <div>
           <label htmlFor="new-station-id" className="text-xs">ID</label>
           <input
